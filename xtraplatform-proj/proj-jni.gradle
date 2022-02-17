@@ -39,13 +39,12 @@ task downloadProjJni(type: Download) {
 }
 
 task getProjJni(/*dependsOn: downloadProjJni,*/ type: Copy) {
-    /*from(zipTree(downloadProjJni.dest)) {
+    from(zipTree(downloadProjJni.dest)) {
         eachFile { fcd ->
             fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
         }
         includeEmptyDirs = false
-    }*/
-    from("/home/zahnen/development/PROJ-JNI")
+    }
     into projJniBuildDir
 }
 
