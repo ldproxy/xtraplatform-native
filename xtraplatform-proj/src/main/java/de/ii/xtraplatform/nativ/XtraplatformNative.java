@@ -1,6 +1,6 @@
 package de.ii.xtraplatform.nativ;
 
-import static de.ii.xtraplatform.runtime.domain.Constants.TMP_DIR_PROP;
+import static de.ii.xtraplatform.base.domain.Constants.TMP_DIR_PROP;
 
 import com.google.common.io.Resources;
 import java.io.File;

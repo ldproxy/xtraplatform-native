@@ -1,4 +1,4 @@
-package de.ii.xtraplatform.nativ.proj.api;
+package de.ii.xtraplatform.proj.domain;
 
 import de.ii.xtraplatform.nativ.NativeLoader;
 import java.nio.file.Path;

@@ -4,7 +4,6 @@ ext {
 }
 
 ext {
-    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     zlibBuildDir = new File(buildDir, 'zlib')
     zlibLibName = 'libz.so'
     embedZlibLibDir = new File(generatedResourcesDir, platform ?: 'unknown')

@@ -4,7 +4,6 @@ ext {
 }
 
 ext {
-    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     sqliteVersionLong = sqliteVersion.replace('.', '') + '000'
     sqliteBuildDir = new File(buildDir, 'sqlite')
     sqliteLibDir = new File(sqliteBuildDir, '.libs')

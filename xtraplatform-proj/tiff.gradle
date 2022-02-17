@@ -4,7 +4,6 @@ ext {
 }
 
 ext {
-    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     tiffBuildDir = new File(buildDir, 'tiff')
     tiffIncludeDir = new File(tiffBuildDir, 'libtiff')
     tiffLibDir = new File(tiffIncludeDir, '.libs')

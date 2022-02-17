@@ -5,7 +5,6 @@ ext {
 }
 
 ext {
-    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     projBuildDir = new File(buildDir, 'proj')
     projInstallDir = new File(projBuildDir, 'install')
     projLibDir = new File(projInstallDir, 'lib')
@@ -14,12 +13,12 @@ ext {
     embedProjLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
     embedProjDataDir = new File(generatedResourcesDir, 'data')
 }
-
+/*
 compileJava {
     project.sourceSets.main.resources { srcDir generatedResourcesDir }
-    outputs.dir(generatedResourcesDir)
+    //outputs.dir(generatedResourcesDir)
 }
-
+*/
 task downloadProj(type: Download) {
     src "https://download.osgeo.org/proj/proj-${projVersion}.tar.gz"
     dest new File(new File(System.getProperty("java.io.tmpdir")), "proj-${projVersion}.tar.gz")
@@ -47,8 +46,7 @@ task getProj(dependsOn: downloadProj, type: Copy) {
 task configureProj(dependsOn: [getProj, buildSQLite, buildTiff], type: Exec) {
     inputs.dir projBuildDir
     workingDir projBuildDir
-    commandLine 'cmake', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_SHARED_LIBS=ON', '-DBUILD_STATIC_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_IPO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=ON', "-DTIFF_INCLUDE_DIR=${tiffIncludeDir}", "-DTIFF_LIBRARY_RELEASE=${tiffLibDir}/${tiffLibName}", "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}"
-//6    commandLine 'cmake', '-DJNI_SUPPORT=ON', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_LIBPROJ_SHARED=ON', '-DBUILD_LIBPROJ_STATIC=OFF', '-DPROJ_TESTS=OFF', '-DENABLE_LTO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=OFF', "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}"
+    commandLine 'cmake', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_SHARED_LIBS=ON', '-DBUILD_STATIC_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_IPO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=ON', "-DTIFF_INCLUDE_DIR=${tiffIncludeDir}", "-DTIFF_LIBRARY_RELEASE=${tiffLibDir}/${tiffLibName}", "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}", '-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0'
 }
 
 task buildProj(dependsOn: configureProj, type: Exec) {

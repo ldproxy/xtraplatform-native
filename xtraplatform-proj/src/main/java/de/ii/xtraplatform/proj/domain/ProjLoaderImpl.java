@@ -1,34 +1,29 @@
-package de.ii.xtraplatform.nativ.proj.api;
+package de.ii.xtraplatform.proj.domain;
 
+import com.github.azahnen.dagger.annotations.AutoBind;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import de.ii.xtraplatform.dropwizard.domain.XtraPlatform;
-import de.ii.xtraplatform.nativ.sqlite.api.SQLiteLoader;
-import de.ii.xtraplatform.nativ.sqlite.api.SQLiteLoaderImpl;
-import de.ii.xtraplatform.runtime.domain.Constants;
-import de.ii.xtraplatform.runtime.domain.XtraPlatformConfiguration;
+import de.ii.xtraplatform.base.domain.AppContext;
+import de.ii.xtraplatform.base.domain.AppConfiguration;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import org.apache.felix.ipojo.annotations.Component;
-import org.apache.felix.ipojo.annotations.Context;
-import org.apache.felix.ipojo.annotations.Instantiate;
-import org.apache.felix.ipojo.annotations.Provides;
-import org.apache.felix.ipojo.annotations.Requires;
-import org.osgi.framework.BundleContext;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
-@Component
-@Provides
-@Instantiate
+@Singleton
+@AutoBind
 public class ProjLoaderImpl implements ProjLoader {
 
   private final Path dataDirectory;
-  public ProjLoaderImpl(@Context BundleContext bundleContext, @Requires XtraPlatform xtraPlatform) {
+
+  @Inject
+  public ProjLoaderImpl(AppContext appContext) {
     this.dataDirectory =
         getDataDirectory(
-            bundleContext.getProperty(Constants.DATA_DIR_KEY),
-            xtraPlatform.getConfiguration());
+            appContext.getDataDir(),
+            appContext.getConfiguration());
   }
 
   // for unit tests only
@@ -82,12 +77,12 @@ public class ProjLoaderImpl implements ProjLoader {
     return dataDirectory;
   }
 
-  private Path getDataDirectory(String dataDir, XtraPlatformConfiguration configuration) {
+  private Path getDataDirectory(Path dataDir, AppConfiguration configuration) {
     String projLocation = configuration.proj.location;
     if (Paths.get(projLocation).isAbsolute()) {
       return Paths.get(projLocation);
     }
 
-    return Paths.get(dataDir, projLocation);
+    return dataDir.resolve(projLocation);
   }
 }
