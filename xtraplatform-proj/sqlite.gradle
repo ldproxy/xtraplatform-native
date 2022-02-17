@@ -1,0 +1,61 @@
+
+ext {
+    sqliteVersion = '3.36.0'
+}
+
+ext {
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    sqliteVersionLong = sqliteVersion.replace('.', '') + '000'
+    sqliteBuildDir = new File(buildDir, 'sqlite')
+    sqliteLibDir = new File(sqliteBuildDir, '.libs')
+    sqliteLibName = 'libsqlite3.so'
+    sqliteBinName = 'sqlite3'
+    embedSqliteLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+}
+
+task downloadSQLite(type: Download) {
+    src "https://www.sqlite.org/2021/sqlite-autoconf-${sqliteVersionLong}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "sqlite-autoconf-${sqliteVersionLong}.tar.gz")
+    overwrite false
+}
+
+task getSQLite(dependsOn: downloadSQLite, type: Copy) {
+    from(tarTree(downloadSQLite.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into sqliteBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task configureSQLite(dependsOn: getSQLite, type: Exec) {
+    outputs.dir sqliteBuildDir
+    workingDir sqliteBuildDir
+    commandLine './configure', '--disable-static'
+}
+
+task buildSQLite(dependsOn: configureSQLite, type: Exec) {
+    outputs.dir sqliteBuildDir
+    workingDir sqliteBuildDir
+    commandLine 'make'
+}
+
+task copySQLiteLib(dependsOn: buildSQLite, type: Copy) {
+    from(sqliteLibDir) {
+        include sqliteLibName
+    }
+    into embedSqliteLibDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copySQLiteLib
+}

@@ -1,0 +1,52 @@
+pipeline:
+
+  load-cache:
+    image: drillster/drone-volume-cache
+    volumes: [/var/lib/docker/tmp:/cache]
+    restore: true
+    mount:
+      - .gradle/caches
+      - .gradle/wrapper
+
+  build.linux:
+    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    commands:
+      - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
+      - ./gradlew build -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -Pplatform=linux-x86_64
+    when:
+      event: [push, pull_request]
+
+  build.linux-release:
+    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    commands:
+      - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
+      - ./gradlew build -Pplatform=linux-x86_64
+    when:
+      event: tag
+
+  publish-snapshot:
+    image: openjdk:11-slim
+    commands:
+      - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
+      - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -PdeployUser=$SNAPSHOT_USER -PdeployPassword=$SNAPSHOT_PASS
+    secrets: [ snapshot_user, snapshot_pass]
+    when:
+      event: push
+#      branch: master
+
+  publish-release:
+    image: openjdk:11-slim
+    commands:
+      - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
+      - ./gradlew publish -PdeployUser=$SNAPSHOT_USER -PdeployPassword=$SNAPSHOT_PASS
+    secrets: [ snapshot_user, snapshot_pass]
+    when:
+      event: tag
+
+  save-cache:
+    image: drillster/drone-volume-cache
+    volumes: [/var/lib/docker/tmp:/cache]
+    rebuild: true
+    mount:
+      - .gradle/caches
+      - .gradle/wrapper

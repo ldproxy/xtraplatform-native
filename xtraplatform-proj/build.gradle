@@ -1,0 +1,86 @@
+plugins {
+    id "de.undercouch.download" version "4.1.2"
+    id "com.github.dkorotych.gradle-maven-exec" version "2.2.1"
+}
+
+ext {
+    platforms = ['linux-x86_64']
+    platform = project.findProperty('platform')
+}
+
+/*if (!platform || !(platform in platforms)) {
+    throw new IllegalArgumentException("invalid platform: ${platform}")
+}*/
+
+apply from: 'sqlite.gradle'
+apply from: 'zlib.gradle'
+apply from: 'tiff.gradle'
+apply from: 'proj.gradle'
+apply from: 'proj-jni.gradle'
+
+repositories {
+    mavenLocal()
+}
+// get the last element which is the just added mavenLocal
+def mavenLocal = repositories[-1]
+// remove jcenter. The repo container guarantees that names are unique, so
+// this will always work correctly
+repositories.removeIf { it.name == mavenLocal.name }
+// and now add again as first repository
+repositories.addFirst(mavenLocal)
+
+dependencies {
+    embeddedExport group: 'org.kortforsyningen', name: 'proj', version: projJniVersion
+
+    provided project(':xtraplatform-sqlite')
+}
+
+configurations.embeddedExport {
+    resolutionStrategy.cacheChangingModulesFor 5, 'minutes'
+}
+
+project.afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                def releasesRepoUrl = "https://dl.interactive-instruments.de/repository/maven-releases/"
+                def snapshotsRepoUrl = "https://dl.interactive-instruments.de/repository/maven-snapshots/"
+
+                name = 'projJni'
+                url projJniVersion.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials {
+                    username project.findProperty('deployUser') ?: ''
+                    password project.findProperty('deployPassword') ?: ''
+                }
+            }
+        }
+        publications {
+            projJni(MavenPublication) {
+                artifact files(configurations.embeddedExport).find { it.name.startsWith("proj-") }
+                groupId = 'org.kortforsyningen'
+                artifactId = 'proj'
+                version = projJniVersion
+                pom.withXml {
+                    def dependencies = asNode().appendNode("dependencies")
+                    project.configurations.embeddedExport.resolvedConfiguration.firstLevelModuleDependencies.each { dep ->
+                        dep.children.each { child ->
+                            def depNode = dependencies.appendNode("dependency")
+                            depNode.appendNode("groupId", child.moduleGroup)
+                            depNode.appendNode("artifactId", child.moduleName)
+                            depNode.appendNode("version", child.moduleVersion)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(PublishToMavenRepository) {
+    onlyIf {
+        (repository == publishing.repositories.projJni &&
+                publication == publishing.publications.projJni) ||
+                (repository != publishing.repositories.projJni &&
+                        publication != publishing.publications.projJni)
+    }
+}

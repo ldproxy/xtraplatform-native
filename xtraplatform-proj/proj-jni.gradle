@@ -1,0 +1,74 @@
+
+ext {
+    projJniVersion = '1.0-SNAPSHOT'
+    projJniTagOrBranch = 'proj8-updates'
+    projJniGithubOrg = 'interactive-instruments'
+    mavenVersion = '3.8.4'
+}
+
+ext {
+    mavenDir = new File(buildDir, 'maven')
+    mavenBinDir = new File(mavenDir, 'bin')
+    projJniBuildDir = new File(buildDir, 'proj-jni')
+    projJniCmakeDir = new File(projJniBuildDir, 'target/cmake')
+    //projInstallDir = new File(projBuildDir, 'install')
+    projLibFile = new File(new File(projInstallDir, 'lib'), projLibName)
+    projIncludeDir = new File(projInstallDir, 'include')
+}
+
+task downloadMaven(type: Download) {
+    src "https://archive.apache.org/dist/maven/maven-3/${mavenVersion}/binaries/apache-maven-${mavenVersion}-bin.zip"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "apache-maven-${mavenVersion}-bin.zip")
+    overwrite false
+}
+
+task getMaven(dependsOn: downloadMaven, type: Copy) {
+    from(zipTree(downloadMaven.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into mavenDir
+}
+
+task downloadProjJni(type: Download) {
+    src "https://github.com/${projJniGithubOrg}/PROJ-JNI/archive/refs/heads/${projJniTagOrBranch}.zip"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "proj-jni.zip")
+    overwrite false
+}
+
+task getProjJni(/*dependsOn: downloadProjJni,*/ type: Copy) {
+    /*from(zipTree(downloadProjJni.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }*/
+    from("/home/zahnen/development/PROJ-JNI")
+    into projJniBuildDir
+}
+
+task configureProjJni(dependsOn: [getProjJni, installProj], type: Exec) {
+    doFirst {
+        mkdir projJniCmakeDir
+    }
+    workingDir projJniCmakeDir
+    commandLine 'cmake', '../../src/main/cpp', "-DPROJINC=${projIncludeDir}", "-DPROJLIB=${projLibFile}", "-DJAVA_AWT_LIBRARY=NotNeeded", "-DJAVA_AWT_INCLUDE_PATH=NotNeeded"
+}
+
+task buildProjJni(dependsOn: configureProjJni, type: Exec) {
+    workingDir projJniCmakeDir
+    commandLine 'cmake', '--build', '.'
+}
+
+task installProjJni(dependsOn: [getMaven, buildProjJni], type: MavenExec) {
+    mavenDir mavenBinDir
+    workingDir projJniBuildDir
+    goals 'package', 'install'
+    define([
+            'skipTests': 'true' //TODO: set library path instead
+    ])
+}
+
+tasks.compileJava.dependsOn installProjJni

@@ -1,0 +1,58 @@
+
+ext {
+    zlibVersion = '1.2.11'
+}
+
+ext {
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    zlibBuildDir = new File(buildDir, 'zlib')
+    zlibLibName = 'libz.so'
+    embedZlibLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+}
+
+task downloadZlib(type: Download) {
+    src "https://zlib.net/zlib-${zlibVersion}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "zlib-${zlibVersion}.tar.gz")
+    overwrite false
+}
+
+task getZlib(dependsOn: downloadZlib, type: Copy) {
+    from(tarTree(downloadZlib.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into zlibBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task configureZlib(dependsOn: getZlib, type: Exec) {
+    outputs.dir zlibBuildDir
+    workingDir zlibBuildDir
+    commandLine './configure'
+}
+
+task buildZlib(dependsOn: configureZlib, type: Exec) {
+    outputs.dir zlibBuildDir
+    workingDir zlibBuildDir
+    commandLine 'make'
+}
+
+task copyZlibLib(dependsOn: buildZlib, type: Copy) {
+    from(zlibBuildDir) {
+        include zlibLibName
+    }
+    into embedZlibLibDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copyZlibLib
+}

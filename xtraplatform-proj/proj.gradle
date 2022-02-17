@@ -1,0 +1,83 @@
+
+//TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
+ext {
+    projVersion = '8.2.0'
+}
+
+ext {
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    projBuildDir = new File(buildDir, 'proj')
+    projInstallDir = new File(projBuildDir, 'install')
+    projLibDir = new File(projInstallDir, 'lib')
+    projDataDir = new File(projInstallDir, 'share/proj')
+    projLibName = 'libproj.so'
+    embedProjLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+    embedProjDataDir = new File(generatedResourcesDir, 'data')
+}
+
+compileJava {
+    project.sourceSets.main.resources { srcDir generatedResourcesDir }
+    outputs.dir(generatedResourcesDir)
+}
+
+task downloadProj(type: Download) {
+    src "https://download.osgeo.org/proj/proj-${projVersion}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "proj-${projVersion}.tar.gz")
+    overwrite false
+}
+
+task getProj(dependsOn: downloadProj, type: Copy) {
+    from(tarTree(downloadProj.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into projBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task configureProj(dependsOn: [getProj, buildSQLite, buildTiff], type: Exec) {
+    inputs.dir projBuildDir
+    workingDir projBuildDir
+    commandLine 'cmake', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_SHARED_LIBS=ON', '-DBUILD_STATIC_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_IPO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=ON', "-DTIFF_INCLUDE_DIR=${tiffIncludeDir}", "-DTIFF_LIBRARY_RELEASE=${tiffLibDir}/${tiffLibName}", "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}"
+//6    commandLine 'cmake', '-DJNI_SUPPORT=ON', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_LIBPROJ_SHARED=ON', '-DBUILD_LIBPROJ_STATIC=OFF', '-DPROJ_TESTS=OFF', '-DENABLE_LTO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=OFF', "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}"
+}
+
+task buildProj(dependsOn: configureProj, type: Exec) {
+    inputs.dir projBuildDir
+    workingDir projBuildDir
+    //commandLine 'make'
+    commandLine 'cmake', '--build', '.'
+}
+
+task installProj(dependsOn: buildProj, type: Exec) {
+    inputs.dir projBuildDir
+    outputs.dir projInstallDir
+    workingDir projBuildDir
+    //commandLine 'make', 'install'
+    commandLine 'cmake', '--build', '.', '--target', 'install'
+}
+
+task copyProjLib(dependsOn: installProj, type: Copy) {
+    from(projLibDir) {
+        include projLibName
+    }
+    into embedProjLibDir
+}
+
+task copyProjData(dependsOn: installProj, type: Copy) {
+    from projDataDir
+    into embedProjDataDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copyProjLib, copyProjData
+}

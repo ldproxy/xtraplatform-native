@@ -1,0 +1,61 @@
+
+ext {
+    tiffVersion = '4.3.0'
+}
+
+ext {
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    tiffBuildDir = new File(buildDir, 'tiff')
+    tiffIncludeDir = new File(tiffBuildDir, 'libtiff')
+    tiffLibDir = new File(tiffIncludeDir, '.libs')
+    tiffLibName = 'libtiff.so'
+    embedTiffLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+}
+
+task downloadTiff(type: Download) {
+    src "https://download.osgeo.org/libtiff/tiff-${tiffVersion}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "tiff-${tiffVersion}.tar.gz")
+    overwrite false
+}
+
+task getTiff(dependsOn: downloadTiff, type: Copy) {
+    from(tarTree(downloadTiff.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into tiffBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task configureTiff(dependsOn: [getTiff, buildZlib], type: Exec) {
+    outputs.dir tiffBuildDir
+    workingDir tiffBuildDir
+    commandLine './configure', '--enable-static=false', '--disable-pixarlog', '--disable-cxx', "--with-zlib-include-dir=${zlibBuildDir}", "--with-zlib-lib-dir=${zlibBuildDir}"
+}
+
+task buildTiff(dependsOn: configureTiff, type: Exec) {
+    outputs.dir tiffBuildDir
+    outputs.dir tiffLibDir
+    workingDir tiffBuildDir
+    commandLine 'make'
+}
+
+task copyTiffLib(dependsOn: buildTiff, type: Copy) {
+    from(tiffLibDir) {
+        include tiffLibName
+    }
+    into embedTiffLibDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copyTiffLib
+}

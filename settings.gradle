@@ -1,0 +1,22 @@
+pluginManagement {
+    repositories {
+        maven {
+            url "https://dl.interactive-instruments.de/repository/maven-releases/"
+        }
+        maven {
+            url "https://dl.interactive-instruments.de/repository/maven-snapshots/"
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'xtraplatform-native'
+
+rootDir.listFiles().each { file ->
+    if (file.isDirectory() && file.name.startsWith('xtraplatform-')) {
+        include file.name
+    }  
+}
+
+includeBuild "../xtraplatform/xtraplatform-core"
