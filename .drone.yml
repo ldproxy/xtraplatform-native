@@ -28,8 +28,8 @@ pipeline:
     image: openjdk:11-slim
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
-      - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -PdeployUser=$SNAPSHOT_USER -PdeployPassword=$SNAPSHOT_PASS
-    secrets: [ snapshot_user, snapshot_pass]
+      - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
+    secrets: [ deploy_user, deploy_password]
     when:
       event: push
 #      branch: master
@@ -38,8 +38,8 @@ pipeline:
     image: openjdk:11-slim
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
-      - ./gradlew publish -PdeployUser=$SNAPSHOT_USER -PdeployPassword=$SNAPSHOT_PASS
-    secrets: [ snapshot_user, snapshot_pass]
+      - ./gradlew publish -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASS
+    secrets: [ deploy_user, deploy_password]
     when:
       event: tag
 
