@@ -28,7 +28,7 @@ pipeline:
     image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
-      - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
+      - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
     when:
       event: push
@@ -38,7 +38,7 @@ pipeline:
     image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
-      - ./gradlew publish -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASS
+      - ./gradlew publish  -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASS
     secrets: [ deploy_user, deploy_password]
     when:
       event: tag
