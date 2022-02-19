@@ -12,6 +12,8 @@ ext {
     throw new IllegalArgumentException("invalid platform: ${platform}")
 }*/
 
+project.sourceSets.main.output.dir(generatedResourcesDir)
+
 apply from: 'sqlite.gradle'
 apply from: 'zlib.gradle'
 apply from: 'tiff.gradle'

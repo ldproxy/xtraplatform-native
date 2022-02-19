@@ -67,3 +67,9 @@ task installProjJni(dependsOn: [getMaven, buildProjJni], type: Exec) {
 }
 
 tasks.compileJava.dependsOn installProjJni
+
+project.afterEvaluate {
+tasks.named('embedClasses').configure {
+  dependsOn installProjJni
+}
+}
