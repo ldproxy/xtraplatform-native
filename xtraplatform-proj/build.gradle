@@ -39,6 +39,19 @@ configurations.embeddedExport {
     resolutionStrategy.cacheChangingModulesFor 5, 'minutes'
 }
 
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+moduleInfo {
+    requires = [
+        'java.logging',
+    ] 
+    uses = [
+        'javax.measure.spi.ServiceProvider'
+    ]
+}
+
 project.afterEvaluate {
     publishing {
         repositories {
@@ -83,4 +96,9 @@ tasks.withType(PublishToMavenRepository) {
                 (repository != publishing.repositories.projJni &&
                         publication != publishing.publications.projJni)
     }
+}
+tasks.withType(GenerateModuleMetadata).configureEach {
+    // The value 'enforced-platform' is provided in the validation
+    // error message you got
+    suppressedValidationErrors.add('enforced-platform')
 }
