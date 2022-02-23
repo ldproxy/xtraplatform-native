@@ -18,7 +18,7 @@ allprojects {
 }
 
 ext {
-    versionSuffix = (project.hasProperty('branch') && project.getProperty('branch') != 'master' ? ('-' + project.getProperty('branch')) : '') + (project.findProperty('snapshot') == 'true' ? '-SNAPSHOT' : '')
+    versionSuffix = (project.hasProperty('branch') && project.getProperty('branch') != 'main' ? ('-' + project.getProperty('branch')) : '') + (project.findProperty('snapshot') == 'true' ? '-SNAPSHOT' : '')
 }
 
 version = '2.0.0' + versionSuffix

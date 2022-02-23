@@ -7,7 +7,7 @@ ext {
 ext {
     projBuildDir = new File(buildDir, 'proj')
     projInstallDir = new File(projBuildDir, 'install')
-    projLibDir = new File(projInstallDir, 'lib64')
+    projLibDir = new File(projInstallDir, 'lib')
     projDataDir = new File(projInstallDir, 'share/proj')
     projLibName = 'libproj.so'
     embedProjLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
@@ -46,7 +46,7 @@ task getProj(dependsOn: downloadProj, type: Copy) {
 task configureProj(dependsOn: [getProj, buildSQLite, buildTiff], type: Exec) {
     inputs.dir projBuildDir
     workingDir projBuildDir
-    commandLine 'cmake', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_SHARED_LIBS=ON', '-DBUILD_STATIC_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_IPO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=ON', "-DTIFF_INCLUDE_DIR=${tiffIncludeDir}", "-DTIFF_LIBRARY_RELEASE=${tiffLibDir}/${tiffLibName}", "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}", '-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0'
+    commandLine 'cmake', '-DCMAKE_INSTALL_LIBDIR=lib', '-DBUILD_CCT=OFF', '-DBUILD_CS2CS=OFF', '-DBUILD_GEOD=OFF', '-DBUILD_GIE=OFF', '-DBUILD_PROJ=OFF', '-DBUILD_PROJINFO=OFF', '-DBUILD_PROJSYNC=OFF', '-DBUILD_SHARED_LIBS=ON', '-DBUILD_STATIC_LIBS=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_IPO=ON', '-DENABLE_CURL=OFF', '-DENABLE_TIFF=ON', "-DTIFF_INCLUDE_DIR=${tiffIncludeDir}", "-DTIFF_LIBRARY_RELEASE=${tiffLibDir}/${tiffLibName}", "-DEXE_SQLITE3=${sqliteBuildDir}/${sqliteBinName}", "-DSQLITE3_INCLUDE_DIR=${sqliteBuildDir}", "-DSQLITE3_LIBRARY=${sqliteLibDir}/${sqliteLibName}", "-DCMAKE_INSTALL_PREFIX=${projInstallDir}", '-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11_ABI=0'
 }
 
 task buildProj(dependsOn: configureProj, type: Exec) {
