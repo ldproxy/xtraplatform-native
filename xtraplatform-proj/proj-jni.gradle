@@ -12,7 +12,7 @@ ext {
     projJniBuildDir = new File(buildDir, 'proj-jni')
     projJniCmakeDir = new File(projJniBuildDir, 'target/cmake')
     //projInstallDir = new File(projBuildDir, 'install')
-    projLibFile = new File(new File(projInstallDir, 'lib'), projLibName)
+    projLibFile = new File(projLibDir, projLibName)
     projIncludeDir = new File(projInstallDir, 'include')
 }
 

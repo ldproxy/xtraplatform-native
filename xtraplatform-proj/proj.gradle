@@ -7,7 +7,7 @@ ext {
 ext {
     projBuildDir = new File(buildDir, 'proj')
     projInstallDir = new File(projBuildDir, 'install')
-    projLibDir = new File(projInstallDir, 'lib')
+    projLibDir = new File(projInstallDir, 'lib64')
     projDataDir = new File(projInstallDir, 'share/proj')
     projLibName = 'libproj.so'
     embedProjLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
