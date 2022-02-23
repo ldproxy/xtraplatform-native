@@ -9,7 +9,7 @@ pipeline:
       - .gradle/wrapper
 
   build.linux:
-    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
       - ./gradlew build -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -Pplatform=linux-x86_64
@@ -17,7 +17,7 @@ pipeline:
       event: [push, pull_request]
 
   build.linux-release:
-    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
       - ./gradlew build -Pplatform=linux-x86_64
@@ -25,7 +25,7 @@ pipeline:
       event: tag
 
   publish-snapshot:
-    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
       - ./gradlew publish -Psnapshot=true -Pbranch=$DRONE_COMMIT_BRANCH -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
@@ -35,7 +35,7 @@ pipeline:
 #      branch: master
 
   publish-release:
-    image: docker.ci.interactive-instruments.de/cicd/ubuntu-2004-gcc93
+    image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
       - ./gradlew publish  -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASS
