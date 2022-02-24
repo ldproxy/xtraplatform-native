@@ -19,3 +19,5 @@ rootDir.listFiles().each { file ->
     }  
 }
 
+//includeBuild '../xtraplatform-build'
+//includeBuild '../xtraplatform/xtraplatform-core'

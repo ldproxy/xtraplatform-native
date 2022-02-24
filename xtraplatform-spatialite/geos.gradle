@@ -1,0 +1,70 @@
+
+ext {
+    geosVersion = '3.9.2'
+}
+
+ext {
+    geosBuildDir = new File(buildDir, 'geos')
+    geosIncludeDir = new File(geosBuildDir, 'capi')
+    geosIncludeDir2 = new File(geosBuildDir, 'include')
+    geosLibDir = new File(geosBuildDir, 'lib')
+    geosConfig = new File(geosBuildDir, 'tools/geos-config')
+    geosLibName = 'libgeos.so'
+    geosLibName2 = 'libgeos_c.so'
+    embedGeosLibDir = generatedResourcesDir//new File(generatedResourcesDir, platform ?: 'unknown')
+}
+
+task downloadGeos(type: Download) {
+    src "http://download.osgeo.org/geos/geos-${geosVersion}.tar.bz2"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "geos-${geosVersion}.tar.bz2")
+    overwrite false
+}
+
+task getGeos(dependsOn: downloadGeos, type: Copy) {
+    from(tarTree(downloadGeos.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into geosBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task buildGeos2(type: Exec) {
+    workingDir geosBuildDir
+    commandLine 'chmod', '+x', "${geosConfig}"
+}
+task configureGeos(dependsOn: [getGeos], type: Exec) {
+    finalizedBy buildGeos2
+    outputs.dir geosBuildDir
+    workingDir geosBuildDir
+    commandLine 'cmake', '-DCMAKE_BUILD_TYPE=Release', "-DCMAKE_INSTALL_PREFIX=${geosBuildDir}", "."
+}
+
+task buildGeos(dependsOn: configureGeos, type: Exec) {
+    finalizedBy buildGeos2
+    outputs.dir geosBuildDir
+    outputs.dir geosLibDir
+    workingDir geosBuildDir
+    commandLine 'make'
+}
+
+task copyGeosLib(dependsOn: buildGeos, type: Copy) {
+    from(geosLibDir) {
+        include geosLibName
+        include geosLibName2
+    }
+    into embedGeosLibDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copyGeosLib
+}

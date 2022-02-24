@@ -1,0 +1,65 @@
+
+ext {
+    spatialiteVersion = '5.0.1'
+}
+
+ext {
+    spatialiteBuildDir = new File(buildDir, 'spatialite')
+    spatialiteLibDir = new File(spatialiteBuildDir, 'src/.libs')
+    spatialiteLibName = 'mod_spatialite.so'
+    embedSpatialiteLibDir = generatedResourcesDir//new File(generatedResourcesDir, platform ?: 'unknown')
+}
+
+task downloadSpatialite(type: Download) {
+    src "http://www.gaia-gis.it/gaia-sins/libspatialite-${spatialiteVersion}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "libspatialite-${spatialiteVersion}.tar.gz")
+    overwrite false
+}
+
+task getSpatialite(dependsOn: downloadSpatialite, type: Copy) {
+    from(tarTree(downloadSpatialite.dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    into spatialiteBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+}
+
+task configureSpatialite(dependsOn: [getSpatialite, buildZlib, buildSQLite, buildGeos], type: Exec) {
+    outputs.dir spatialiteBuildDir
+    workingDir spatialiteBuildDir
+    environment "CPPFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
+    environment "CFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
+    environment "LDFLAGS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
+    commandLine './configure', '--enable-module-only', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-knn=no',  '--enable-mathsql=n', "--with-geosconfig=${geosConfig}"
+    doLast {
+        println "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
+    }
+}
+
+task buildSpatialite(dependsOn: configureSpatialite, type: Exec) {
+    outputs.dir spatialiteBuildDir
+    outputs.dir spatialiteLibDir
+    workingDir spatialiteBuildDir
+    commandLine 'make'
+}
+
+task copySpatialiteLib(dependsOn: buildSpatialite, type: Copy) {
+    from(spatialiteLibDir) {
+        include spatialiteLibName
+    }
+    into embedSpatialiteLibDir
+}
+
+if (platform && (platform in platforms)) {
+    tasks.processResources.dependsOn copySpatialiteLib
+}

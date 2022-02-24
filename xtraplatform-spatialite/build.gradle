@@ -1,0 +1,53 @@
+plugins {
+    id "de.undercouch.download" version "4.1.2"
+}
+
+ext {
+    platforms = ['linux-x86_64']
+    platform = project.findProperty('platform')
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+}
+
+/*if (!platform || !(platform in platforms)) {
+    throw new IllegalArgumentException("invalid platform: ${platform}")
+}*/
+
+project.sourceSets.main.output.dir(generatedResourcesDir)
+
+apply from: 'zlib.gradle'
+apply from: 'sqlite.gradle'
+apply from: 'geos.gradle'
+apply from: 'spatialite.gradle'
+
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+moduleInfo {
+
+}
+
+project.afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                def releasesRepoUrl = "https://dl.interactive-instruments.de/repository/maven-releases/"
+                def snapshotsRepoUrl = "https://dl.interactive-instruments.de/repository/maven-snapshots/"
+
+                name = 'projJni'
+                url project.parent.version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials {
+                    username project.findProperty('deployUser') ?: ''
+                    password project.findProperty('deployPassword') ?: ''
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(GenerateModuleMetadata).configureEach {
+    // The value 'enforced-platform' is provided in the validation
+    // error message you got
+    suppressedValidationErrors.add('enforced-platform')
+}
