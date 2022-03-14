@@ -61,15 +61,13 @@ task buildProjJni(dependsOn: configureProjJni, type: Exec) {
     commandLine 'cmake', '--build', '.'
 }
 
-task installProjJni(dependsOn: [getMaven, buildProjJni], type: Exec) {
+tasks.register('installProjJni', Exec) {
+    dependsOn getMaven
+    dependsOn buildProjJni
+    finalizedBy tasks.named('embedClasses')
     workingDir projJniBuildDir
     commandLine new File(mavenBinDir, 'mvn').toString(), '-D', 'skipTests=true', 'package', 'install' //TODO: set library path instead of skipTests
 }
 
-tasks.compileJava.dependsOn installProjJni
+tasks.compileJava.dependsOn tasks.named('installProjJni')
 
-project.afterEvaluate {
-tasks.named('embedClasses').configure {
-  dependsOn installProjJni
-}
-}
