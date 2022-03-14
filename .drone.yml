@@ -38,7 +38,7 @@ pipeline:
     image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
       - export GRADLE_USER_HOME=$${DRONE_WORKSPACE}/.gradle
-      - ./gradlew publish  -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASS
+      - ./gradlew publish  -Pplatform=linux-x86_64 -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
     when:
       event: tag
