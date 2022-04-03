@@ -10,7 +10,7 @@ ext {
 }
 
 task downloadZlib(type: Download) {
-    src "https://zlib.net/zlib-${zlibVersion}.tar.gz"
+    src "https://zlib.net/fossils/zlib-${zlibVersion}.tar.gz"
     dest new File(new File(System.getProperty("java.io.tmpdir")), "zlib-${zlibVersion}.tar.gz")
     overwrite false
 }
