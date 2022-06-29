@@ -1,3 +1,10 @@
+/*
+ * Copyright 2022 interactive instruments GmbH
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package de.ii.xtraplatform.nativ;
 
 import static de.ii.xtraplatform.base.domain.Constants.TMP_DIR_PROP;
@@ -20,7 +27,9 @@ public class XtraplatformNative {
   private static final Path TMP_DIR = Paths.get(System.getProperty(TMP_DIR_PROP));
 
   public static boolean copyLibsToTmpDir(
-      Class<?> contextClass, Map<String, List<String>> libs, String parentName,
+      Class<?> contextClass,
+      Map<String, List<String>> libs,
+      String parentName,
       String parentLabel) {
     String osIdentifier = OSInfo.getIdentifierForCurrentOS();
 
@@ -47,30 +56,32 @@ public class XtraplatformNative {
   public static void copyResources(Class<?> contextClass, Map<Path, List<String>> resources) {
     resources.forEach(
         (path, files) -> {
-          files.forEach(resource -> {
-            File file = path.resolve(resource).toFile();
-            if (!file.exists()) {
-              try {
-                Files.createDirectories(path);
-                Resources.copy(
-                    Resources.getResource(contextClass, String.format("/data/%s", resource)),
-                    new FileOutputStream(file));
-              } catch (IOException e) {
-                throw new IllegalStateException("Could not create file: " + file.toString());
-              }
-            }
-          });
+          files.forEach(
+              resource -> {
+                File file = path.resolve(resource).toFile();
+                if (!file.exists()) {
+                  try {
+                    Files.createDirectories(path);
+                    Resources.copy(
+                        Resources.getResource(contextClass, String.format("/data/%s", resource)),
+                        new FileOutputStream(file));
+                  } catch (IOException e) {
+                    throw new IllegalStateException("Could not create file: " + file.toString());
+                  }
+                }
+              });
         });
   }
 
-  private static void copyLibToTmpDir(Class<?> contextClass, String parentName,
-      String osIdentifier, String resource) {
+  private static void copyLibToTmpDir(
+      Class<?> contextClass, String parentName, String osIdentifier, String resource) {
     File lib = TMP_DIR.resolve(parentName).resolve(osIdentifier).resolve(resource).toFile();
     if (!lib.exists()) {
       try {
         Files.createDirectories(lib.getParentFile().toPath());
-        Resources.copy(Resources.getResource(contextClass,
-            String.format("/%s/%s", osIdentifier, resource)), new FileOutputStream(lib));
+        Resources.copy(
+            Resources.getResource(contextClass, String.format("/%s/%s", osIdentifier, resource)),
+            new FileOutputStream(lib));
       } catch (Throwable e) {
         throw new IllegalStateException("Could not create file: " + lib.toString());
       }
@@ -78,8 +89,8 @@ public class XtraplatformNative {
   }
 
   private static void loadLib(String parentName, String libName) {
-    Path lib = TMP_DIR.resolve(parentName).resolve(OSInfo.getIdentifierForCurrentOS())
-        .resolve(libName);
+    Path lib =
+        TMP_DIR.resolve(parentName).resolve(OSInfo.getIdentifierForCurrentOS()).resolve(libName);
     try {
       System.load(lib.toString());
     } catch (Throwable e) {

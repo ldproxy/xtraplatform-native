@@ -1,10 +1,17 @@
+/*
+ * Copyright 2022 interactive instruments GmbH
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package de.ii.xtraplatform.proj.domain;
 
 import com.github.azahnen.dagger.annotations.AutoBind;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import de.ii.xtraplatform.base.domain.AppContext;
 import de.ii.xtraplatform.base.domain.AppConfiguration;
+import de.ii.xtraplatform.base.domain.AppContext;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -20,10 +27,7 @@ public class ProjLoaderImpl implements ProjLoader {
 
   @Inject
   public ProjLoaderImpl(AppContext appContext) {
-    this.dataDirectory =
-        getDataDirectory(
-            appContext.getDataDir(),
-            appContext.getConfiguration());
+    this.dataDirectory = getDataDirectory(appContext.getDataDir(), appContext.getConfiguration());
   }
 
   // for unit tests only
@@ -43,33 +47,35 @@ public class ProjLoaderImpl implements ProjLoader {
 
   @Override
   public Map<String, List<String>> getLibraries() {
-    return ImmutableMap.of("linux-x86_64", ImmutableList.of("libsqlite3.so", "libz.so", "libtiff.so", "libproj.so"));
+    return ImmutableMap.of(
+        "linux-x86_64", ImmutableList.of("libsqlite3.so", "libz.so", "libtiff.so", "libproj.so"));
   }
 
   @Override
   public Map<Path, List<String>> getResources() {
-    return ImmutableMap.of(dataDirectory, ImmutableList.of(
-        "CH",
-        "deformation_model.schema.json",
-        "GL27",
-        "ITRF2000",
-        "ITRF2008",
-        "ITRF2014",
-        "nad27",
-        "nad83",
-        "nad.lst",
-        "other.extra",
-        "proj.db",
-        "proj.ini",
-        "projjson.schema.json",
-        "triangulation.schema.json",
-        "world"
-    ));
+    return ImmutableMap.of(
+        dataDirectory,
+        ImmutableList.of(
+            "CH",
+            "deformation_model.schema.json",
+            "GL27",
+            "ITRF2000",
+            "ITRF2008",
+            "ITRF2014",
+            "nad27",
+            "nad83",
+            "nad.lst",
+            "other.extra",
+            "proj.db",
+            "proj.ini",
+            "projjson.schema.json",
+            "triangulation.schema.json",
+            "world"));
   }
 
   @Override
   public void preload() {
-    //sqLiteLoader.load();
+    // sqLiteLoader.load();
   }
 
   @Override
