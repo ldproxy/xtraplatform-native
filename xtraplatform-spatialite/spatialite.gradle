@@ -7,7 +7,7 @@ ext {
     spatialiteBuildDir = new File(buildDir, 'spatialite')
     spatialiteLibDir = new File(spatialiteBuildDir, 'src/.libs')
     spatialiteLibName = 'mod_spatialite.so'
-    embedSpatialiteLibDir = generatedResourcesDir//new File(generatedResourcesDir, platform ?: 'unknown')
+    embedSpatialiteLibDir = generatedResourcesDir
 }
 
 task downloadSpatialite(type: Download) {
@@ -60,6 +60,4 @@ task copySpatialiteLib(dependsOn: buildSpatialite, type: Copy) {
     into embedSpatialiteLibDir
 }
 
-if (platform && (platform in platforms)) {
-    tasks.processResources.dependsOn copySpatialiteLib
-}
+tasks.processResources.dependsOn copySpatialiteLib

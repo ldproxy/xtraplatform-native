@@ -25,26 +25,12 @@ public class XtraplatformNative {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(XtraplatformNative.class);
   private static final Path TMP_DIR = Paths.get(System.getProperty(TMP_DIR_PROP));
+  public static final String LIB_DIR_NAME = "lib";
 
   public static boolean copyLibsToTmpDir(
-      Class<?> contextClass,
-      Map<String, List<String>> libs,
-      String parentName,
-      String parentLabel) {
-    String osIdentifier = OSInfo.getIdentifierForCurrentOS();
+      Class<?> contextClass, List<String> libs, String parentName, String parentLabel) {
 
-    if (!libs.containsKey(osIdentifier)) {
-      LOGGER.warn(
-          "{} is not supported for OS '{}-{}'. It might work if you install {} as a system library.",
-          parentLabel,
-          System.getProperty("os.name"),
-          System.getProperty("os.arch"),
-          parentName);
-      return true;
-    }
-
-    libs.get(osIdentifier)
-        .forEach(lib -> copyLibToTmpDir(contextClass, parentName, osIdentifier, lib));
+    libs.forEach(lib -> copyLibToTmpDir(contextClass, parentName, lib));
 
     return false;
   }
@@ -73,14 +59,13 @@ public class XtraplatformNative {
         });
   }
 
-  private static void copyLibToTmpDir(
-      Class<?> contextClass, String parentName, String osIdentifier, String resource) {
-    File lib = TMP_DIR.resolve(parentName).resolve(osIdentifier).resolve(resource).toFile();
+  private static void copyLibToTmpDir(Class<?> contextClass, String parentName, String resource) {
+    File lib = TMP_DIR.resolve(parentName).resolve(LIB_DIR_NAME).resolve(resource).toFile();
     if (!lib.exists()) {
       try {
         Files.createDirectories(lib.getParentFile().toPath());
         Resources.copy(
-            Resources.getResource(contextClass, String.format("/%s/%s", osIdentifier, resource)),
+            Resources.getResource(contextClass, String.format("/%s/%s", LIB_DIR_NAME, resource)),
             new FileOutputStream(lib));
       } catch (Throwable e) {
         throw new IllegalStateException("Could not create file: " + lib.toString());
@@ -89,8 +74,7 @@ public class XtraplatformNative {
   }
 
   private static void loadLib(String parentName, String libName) {
-    Path lib =
-        TMP_DIR.resolve(parentName).resolve(OSInfo.getIdentifierForCurrentOS()).resolve(libName);
+    Path lib = TMP_DIR.resolve(parentName).resolve(LIB_DIR_NAME).resolve(libName);
     try {
       System.load(lib.toString());
     } catch (Throwable e) {

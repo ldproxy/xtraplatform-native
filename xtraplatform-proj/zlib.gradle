@@ -6,7 +6,7 @@ ext {
 ext {
     zlibBuildDir = new File(buildDir, 'zlib')
     zlibLibName = 'libz.so'
-    embedZlibLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+    embedZlibLibDir = new File(generatedResourcesDir, 'lib')
 }
 
 task downloadZlib(type: Download) {
@@ -52,6 +52,4 @@ task copyZlibLib(dependsOn: buildZlib, type: Copy) {
     into embedZlibLibDir
 }
 
-if (platform && (platform in platforms)) {
-    tasks.processResources.dependsOn copyZlibLib
-}
+tasks.processResources.dependsOn copyZlibLib

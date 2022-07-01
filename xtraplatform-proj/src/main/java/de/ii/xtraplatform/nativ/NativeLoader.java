@@ -21,8 +21,7 @@ public interface NativeLoader {
     if (!useGlobalLibs) {
       preload();
 
-      XtraplatformNative.loadLibs(
-          getLibraries().get(OSInfo.getIdentifierForCurrentOS()), getName());
+      XtraplatformNative.loadLibs(getLibraries(), getName());
     }
 
     XtraplatformNative.copyResources(this.getClass(), getResources());
@@ -34,7 +33,7 @@ public interface NativeLoader {
 
   String getLabel();
 
-  Map<String, List<String>> getLibraries();
+  List<String> getLibraries();
 
   default Map<Path, List<String>> getResources() {
     return ImmutableMap.of();

@@ -11,7 +11,7 @@ ext {
     geosConfig = new File(geosBuildDir, 'tools/geos-config')
     geosLibName = 'libgeos.so'
     geosLibName2 = 'libgeos_c.so'
-    embedGeosLibDir = generatedResourcesDir//new File(generatedResourcesDir, platform ?: 'unknown')
+    embedGeosLibDir = generatedResourcesDir
 }
 
 task downloadGeos(type: Download) {
@@ -65,6 +65,4 @@ task copyGeosLib(dependsOn: buildGeos, type: Copy) {
     into embedGeosLibDir
 }
 
-if (platform && (platform in platforms)) {
-    tasks.processResources.dependsOn copyGeosLib
-}
+tasks.processResources.dependsOn copyGeosLib

@@ -10,7 +10,7 @@ ext {
     projLibDir = new File(projInstallDir, 'lib')
     projDataDir = new File(projInstallDir, 'share/proj')
     projLibName = 'libproj.so'
-    embedProjLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+    embedProjLibDir = new File(generatedResourcesDir, 'lib')
     embedProjDataDir = new File(generatedResourcesDir, 'data')
 }
 /*
@@ -76,6 +76,4 @@ task copyProjData(dependsOn: installProj, type: Copy) {
     into embedProjDataDir
 }
 
-if (platform && (platform in platforms)) {
-    tasks.processResources.dependsOn copyProjLib, copyProjData
-}
+tasks.processResources.dependsOn copyProjLib, copyProjData

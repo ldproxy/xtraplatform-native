@@ -8,7 +8,7 @@ ext {
     tiffIncludeDir = new File(tiffBuildDir, 'libtiff')
     tiffLibDir = new File(tiffIncludeDir, '.libs')
     tiffLibName = 'libtiff.so'
-    embedTiffLibDir = new File(generatedResourcesDir, platform ?: 'unknown')
+    embedTiffLibDir = new File(generatedResourcesDir, 'lib')
 }
 
 task downloadTiff(type: Download) {
@@ -55,6 +55,4 @@ task copyTiffLib(dependsOn: buildTiff, type: Copy) {
     into embedTiffLibDir
 }
 
-if (platform && (platform in platforms)) {
-    tasks.processResources.dependsOn copyTiffLib
-}
+tasks.processResources.dependsOn copyTiffLib

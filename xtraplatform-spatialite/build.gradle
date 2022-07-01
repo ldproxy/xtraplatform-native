@@ -5,14 +5,8 @@ plugins {
 maturity = 'EXPERIMENTAL'
 
 ext {
-    platforms = ['linux-x86_64']
-    platform = project.findProperty('platform')
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
 }
-
-/*if (!platform || !(platform in platforms)) {
-    throw new IllegalArgumentException("invalid platform: ${platform}")
-}*/
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
 

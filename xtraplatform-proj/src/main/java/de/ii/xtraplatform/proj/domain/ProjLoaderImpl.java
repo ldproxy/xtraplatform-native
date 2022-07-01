@@ -46,9 +46,8 @@ public class ProjLoaderImpl implements ProjLoader {
   }
 
   @Override
-  public Map<String, List<String>> getLibraries() {
-    return ImmutableMap.of(
-        "linux-x86_64", ImmutableList.of("libsqlite3.so", "libz.so", "libtiff.so", "libproj.so"));
+  public List<String> getLibraries() {
+    return ImmutableList.of("libsqlite3.so", "libz.so", "libtiff.so", "libproj.so");
   }
 
   @Override
