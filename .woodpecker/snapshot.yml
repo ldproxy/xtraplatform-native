@@ -10,15 +10,15 @@ pipeline:
   libs.linux-x86_64:
     image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
     commands:
-      - ./gradlew publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
+      - ./gradlew clean publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
     when:
       event: push
 
-  libs.linux-arm64:
+  libs.linux-arm_64:
     image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
     commands:
-      - ./gradlew publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
+      - ./gradlew clean publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
     when:
       event: push
