@@ -32,7 +32,7 @@ dependencies {
 }
 
 configurations.embeddedExport {
-    resolutionStrategy.cacheChangingModulesFor 5, 'minutes'
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 }
 
 jar {
