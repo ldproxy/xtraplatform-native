@@ -28,7 +28,8 @@ repositories {
 }
 
 dependencies {
-    embeddedExport group: 'org.kortforsyningen', name: 'proj', version: projJniVersion
+    embeddedExport files(tasks.findByName('installProjJni'))//group: 'org.kortforsyningen', name: 'proj', version: projJniVersion
+    embeddedExport group: 'org.opengis', name: 'geoapi', version: geoApiVersion
 }
 
 configurations.embeddedExport {

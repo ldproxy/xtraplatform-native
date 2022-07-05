@@ -3,6 +3,7 @@ ext {
     projJniVersion = '1.0-SNAPSHOT'
     projJniTagOrBranch = 'proj8-updates'
     projJniGithubOrg = 'interactive-instruments'
+    geoApiVersion = '3.0.1'
     mavenVersion = '3.8.4'
 }
 
@@ -64,9 +65,10 @@ task buildProjJni(dependsOn: configureProjJni, type: Exec) {
 tasks.register('installProjJni', Exec) {
     dependsOn getMaven
     dependsOn buildProjJni
-    finalizedBy tasks.named('embedClasses')
+    finalizedBy 'embedClasses'
+    outputs.file new File(projJniBuildDir, "target/proj-${projJniVersion}.jar")
     workingDir projJniBuildDir
-    commandLine new File(mavenBinDir, 'mvn').toString(), '-D', 'skipTests=true', 'package', 'install' //TODO: set library path instead of skipTests
+    commandLine new File(mavenBinDir, 'mvn').toString(), '-D', 'skipTests=true', 'package' //TODO: set library path instead of skipTests
 }
 
 tasks.compileJava.dependsOn tasks.named('installProjJni')
