@@ -17,15 +17,15 @@ apply from: 'proj.gradle'
 apply from: 'proj-jni.gradle'
 
 repositories {
-    mavenLocal()
+    exclusiveContent {
+        forRepository {
+            mavenLocal()
+        }
+        filter {
+            includeModule('org.kortforsyningen','proj')
+        }
+    }
 }
-// get the last element which is the just added mavenLocal
-def mavenLocal = repositories[-1]
-// remove jcenter. The repo container guarantees that names are unique, so
-// this will always work correctly
-repositories.removeIf { it.name == mavenLocal.name }
-// and now add again as first repository
-repositories.addFirst(mavenLocal)
 
 dependencies {
     embeddedExport group: 'org.kortforsyningen', name: 'proj', version: projJniVersion
