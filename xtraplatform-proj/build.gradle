@@ -41,6 +41,9 @@ jar {
 }
 
 moduleInfo {
+    exports = [
+        'org.kortforsyningen.proj'
+    ]
     requires = [
         'java.logging',
     ] 
