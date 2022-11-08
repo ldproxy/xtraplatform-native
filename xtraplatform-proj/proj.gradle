@@ -6,10 +6,10 @@ ext {
 
 ext {
     projBuildDir = new File(buildDir, 'proj')
-    projInstallDir = new File(projBuildDir, 'install')
+    projInstallDir = new File(projBuildDir, 'inst')
     projLibDir = new File(projInstallDir, 'lib')
     projDataDir = new File(projInstallDir, 'share/proj')
-    projLibName = 'libproj.so'
+    projLibName = project.osdetector.os == 'osx' ? 'libproj.dylib' : 'libproj.so'
     embedProjLibDir = new File(generatedResourcesDir, 'lib')
     embedProjDataDir = new File(generatedResourcesDir, 'data')
 }

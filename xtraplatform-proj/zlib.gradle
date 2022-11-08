@@ -5,7 +5,7 @@ ext {
 
 ext {
     zlibBuildDir = new File(buildDir, 'zlib')
-    zlibLibName = 'libz.so'
+    zlibLibName = project.osdetector.os == 'osx' ? 'libz.dylib' : 'libz.so'
     embedZlibLibDir = new File(generatedResourcesDir, 'lib')
 }
 
