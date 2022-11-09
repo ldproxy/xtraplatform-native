@@ -59,7 +59,7 @@ task copySpatialiteLib(dependsOn: buildSpatialite, type: Copy) {
     from(spatialiteLibDir) {
         include spatialiteLibName
     }
-    into embeddedLibDir
+    into embeddedDataDir
 }
 
 tasks.processResources.dependsOn copySpatialiteLib
