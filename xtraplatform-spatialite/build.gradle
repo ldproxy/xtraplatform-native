@@ -5,7 +5,11 @@ plugins {
 maturity = 'EXPERIMENTAL'
 
 ext {
+    //TODO: when changed, adjust SpatiaLiteLoaderImpl.getName (can we inject it?)
+    spatialiteVersion = '5.0.1'
+    buildVersion = '2'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    embeddedLibDir = new File(generatedResourcesDir, "spatialite-${spatialiteVersion}-${buildVersion}/lib")
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
@@ -15,6 +19,9 @@ apply from: 'sqlite.gradle'
 apply from: 'geos.gradle'
 apply from: 'spatialite.gradle'
 
+dependencies {
+    provided project(':xtraplatform-nativ-loader')
+}
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

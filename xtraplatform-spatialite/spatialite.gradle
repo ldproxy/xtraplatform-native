@@ -1,13 +1,8 @@
 
 ext {
-    spatialiteVersion = '5.0.1'
-}
-
-ext {
     spatialiteBuildDir = new File(buildDir, 'spatialite')
     spatialiteLibDir = new File(spatialiteBuildDir, 'src/.libs')
-    spatialiteLibName = 'mod_spatialite.so'
-    embedSpatialiteLibDir = generatedResourcesDir
+    spatialiteLibName = project.osdetector.os == 'osx' ? 'mod_spatialite.dylib' : 'mod_spatialite.so'
 }
 
 task downloadSpatialite(type: Download) {
@@ -20,6 +15,13 @@ task getSpatialite(dependsOn: downloadSpatialite, type: Copy) {
     from(tarTree(downloadSpatialite.dest)) {
         eachFile { fcd ->
             fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+            /*if (fcd.path == 'configure') {
+                println 'shrext_cmds=\'`test .$module = .yes && echo .so || echo .dylib`\''
+                filter { line ->
+                    line.replace('shrext_cmds=\'`test .$module = .yes && echo .so || echo .dylib`\'', 'shrext_cmds=\'.dylib\'')
+                }
+            }*/
+            //TODO: checking whether the gcc linker (/Library/Developer/CommandLineTools/usr/bin/ld) supports shared libraries... no
         }
         includeEmptyDirs = false
     }
@@ -40,7 +42,7 @@ task configureSpatialite(dependsOn: [getSpatialite, buildZlib, buildSQLite, buil
     environment "CPPFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     environment "CFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     environment "LDFLAGS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
-    commandLine './configure', '--enable-module-only', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-knn=no',  '--enable-mathsql=n', "--with-geosconfig=${geosConfig}", "${rootProject.osdetector.arch}-unknown-linux-gnu"
+    commandLine './configure', '--enable-module-only', '--enable-shared', '--disable-static', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-knn=no',  '--enable-mathsql=n', "--with-geosconfig=${geosConfig}", "${rootProject.osdetector.arch}-unknown-linux-gnu"
     doLast {
         println "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     }
@@ -57,7 +59,7 @@ task copySpatialiteLib(dependsOn: buildSpatialite, type: Copy) {
     from(spatialiteLibDir) {
         include spatialiteLibName
     }
-    into embedSpatialiteLibDir
+    into embeddedLibDir
 }
 
 tasks.processResources.dependsOn copySpatialiteLib

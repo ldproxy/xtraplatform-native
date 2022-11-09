@@ -9,9 +9,8 @@ ext {
     geosIncludeDir2 = new File(geosBuildDir, 'include')
     geosLibDir = new File(geosBuildDir, 'lib')
     geosConfig = new File(geosBuildDir, 'tools/geos-config')
-    geosLibName = 'libgeos.so'
-    geosLibName2 = 'libgeos_c.so'
-    embedGeosLibDir = generatedResourcesDir
+    geosLibName = project.osdetector.os == 'osx' ? 'libgeos.dylib' : 'libgeos.so'
+    geosLibName2 = project.osdetector.os == 'osx' ? 'libgeos_c.dylib' : 'libgeos_c.so'
 }
 
 task downloadGeos(type: Download) {
@@ -62,7 +61,7 @@ task copyGeosLib(dependsOn: buildGeos, type: Copy) {
         include geosLibName
         include geosLibName2
     }
-    into embedGeosLibDir
+    into embeddedLibDir
 }
 
 tasks.processResources.dependsOn copyGeosLib

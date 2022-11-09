@@ -5,8 +5,7 @@ ext {
 
 ext {
     zlibBuildDir = new File(buildDir, 'zlib')
-    zlibLibName = 'libz.so'
-    embedZlibLibDir = generatedResourcesDir
+    zlibLibName = project.osdetector.os == 'osx' ? 'libz.dylib' : 'libz.so'
 }
 
 task downloadZlib(type: Download) {
@@ -49,7 +48,7 @@ task copyZlibLib(dependsOn: buildZlib, type: Copy) {
     from(zlibBuildDir) {
         include zlibLibName
     }
-    into embedZlibLibDir
+    into embeddedLibDir
 }
 
 tasks.processResources.dependsOn copyZlibLib
