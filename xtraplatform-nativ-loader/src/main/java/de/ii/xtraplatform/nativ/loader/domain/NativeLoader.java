@@ -5,7 +5,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package de.ii.xtraplatform.nativ;
+package de.ii.xtraplatform.nativ.loader.domain;
 
 import com.google.common.collect.ImmutableMap;
 import java.nio.file.Path;
@@ -15,16 +15,10 @@ import java.util.Map;
 public interface NativeLoader {
 
   default void load() {
-    boolean useGlobalLibs =
-        XtraplatformNative.copyLibsToTmpDir(this.getClass(), getLibraries(), getName(), getLabel());
-
-    if (!useGlobalLibs) {
-      preload();
-
-      XtraplatformNative.loadLibs(getLibraries(), getName());
-    }
-
-    XtraplatformNative.copyResources(this.getClass(), getResources());
+    XtraplatformNative.copyLibsToTmpDir(this.getClass(), getLibraries(), getName(), getLabel());
+    preload();
+    XtraplatformNative.loadLibs(getLibraries(), getName());
+    XtraplatformNative.copyResources(this.getClass(), getName(), getResources());
   }
 
   default void preload() {}
