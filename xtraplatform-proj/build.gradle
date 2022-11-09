@@ -5,7 +5,12 @@ plugins {
 maturity = 'EXPERIMENTAL'
 
 ext {
+    //TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
+    projVersion = '8.2.0'
+    buildVersion = '3'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    embeddedLibDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/lib")
+    embeddedDataDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/data")
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
@@ -28,6 +33,8 @@ repositories {
 }
 
 dependencies {
+    provided project(':xtraplatform-nativ-loader')
+    
     embeddedExport files(tasks.findByName('installProjJni'))//group: 'org.kortforsyningen', name: 'proj', version: projJniVersion
     embeddedExport group: 'org.opengis', name: 'geoapi', version: geoApiVersion
 }

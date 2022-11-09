@@ -9,7 +9,6 @@ ext {
     sqliteLibDir = new File(sqliteBuildDir, '.libs')
     sqliteLibName = project.osdetector.os == 'osx' ? 'libsqlite3.dylib' : 'libsqlite3.so'
     sqliteBinName = 'sqlite3'
-    embedSqliteLibDir = new File(generatedResourcesDir, 'lib')
 }
 
 task downloadSQLite(type: Download) {
@@ -52,7 +51,7 @@ task copySQLiteLib(dependsOn: buildSQLite, type: Copy) {
     from(sqliteLibDir) {
         include sqliteLibName
     }
-    into embedSqliteLibDir
+    into embeddedLibDir
 }
 
 tasks.processResources.dependsOn copySQLiteLib

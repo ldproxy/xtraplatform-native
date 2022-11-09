@@ -8,7 +8,6 @@ ext {
     tiffIncludeDir = new File(tiffBuildDir, 'libtiff')
     tiffLibDir = new File(tiffIncludeDir, '.libs')
     tiffLibName = project.osdetector.os == 'osx' ? 'libtiff.dylib' : 'libtiff.so'
-    embedTiffLibDir = new File(generatedResourcesDir, 'lib')
 }
 
 task downloadTiff(type: Download) {
@@ -52,7 +51,7 @@ task copyTiffLib(dependsOn: buildTiff, type: Copy) {
     from(tiffLibDir) {
         include tiffLibName
     }
-    into embedTiffLibDir
+    into embeddedLibDir
 }
 
 tasks.processResources.dependsOn copyTiffLib

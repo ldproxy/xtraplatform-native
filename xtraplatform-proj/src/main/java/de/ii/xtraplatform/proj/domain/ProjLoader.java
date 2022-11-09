@@ -7,7 +7,7 @@
  */
 package de.ii.xtraplatform.proj.domain;
 
-import de.ii.xtraplatform.nativ.NativeLoader;
+import de.ii.xtraplatform.nativ.loader.domain.NativeLoader;
 import java.nio.file.Path;
 
 public interface ProjLoader extends NativeLoader {

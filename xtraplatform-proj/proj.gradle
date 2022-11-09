@@ -1,17 +1,10 @@
 
-//TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
-ext {
-    projVersion = '8.2.0'
-}
-
 ext {
     projBuildDir = new File(buildDir, 'proj')
     projInstallDir = new File(projBuildDir, 'inst')
     projLibDir = new File(projInstallDir, 'lib')
     projDataDir = new File(projInstallDir, 'share/proj')
     projLibName = project.osdetector.os == 'osx' ? 'libproj.dylib' : 'libproj.so'
-    embedProjLibDir = new File(generatedResourcesDir, 'lib')
-    embedProjDataDir = new File(generatedResourcesDir, 'data')
 }
 /*
 compileJava {
@@ -68,12 +61,12 @@ task copyProjLib(dependsOn: installProj, type: Copy) {
     from(projLibDir) {
         include projLibName
     }
-    into embedProjLibDir
+    into embeddedLibDir
 }
 
 task copyProjData(dependsOn: installProj, type: Copy) {
     from projDataDir
-    into embedProjDataDir
+    into embeddedDataDir
 }
 
 tasks.processResources.dependsOn copyProjLib, copyProjData

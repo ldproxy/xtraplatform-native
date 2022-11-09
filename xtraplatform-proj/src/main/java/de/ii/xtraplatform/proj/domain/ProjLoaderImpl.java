@@ -48,7 +48,7 @@ public class ProjLoaderImpl implements ProjLoader {
   @Override
   public List<String> getLibraries() {
     if (System.getProperty("os.name").contains("Mac")) {
-        return ImmutableList.of("libsqlite3.dylib", "libz.dylib", "libtiff.dylib", "libproj.dylib");
+      return ImmutableList.of("libsqlite3.dylib", "libz.dylib", "libtiff.dylib", "libproj.dylib");
     }
 
     return ImmutableList.of("libsqlite3.so", "libz.so", "libtiff.so", "libproj.so");
