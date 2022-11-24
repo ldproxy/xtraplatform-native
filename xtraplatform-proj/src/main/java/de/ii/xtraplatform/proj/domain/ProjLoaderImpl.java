@@ -37,7 +37,7 @@ public class ProjLoaderImpl implements ProjLoader {
 
   @Override
   public String getName() {
-    return "proj-8.2.0-3";
+    return "proj-9.1.0-0";
   }
 
   @Override
