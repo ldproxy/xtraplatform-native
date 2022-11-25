@@ -1,6 +1,6 @@
 
 ext {
-    sqliteVersion = '3.36.0'
+    sqliteVersion = '3.40.0'
 }
 
 ext {
@@ -12,7 +12,7 @@ ext {
 }
 
 task downloadSQLite(type: Download) {
-    src "https://www.sqlite.org/2021/sqlite-autoconf-${sqliteVersionLong}.tar.gz"
+    src "https://www.sqlite.org/2022/sqlite-autoconf-${sqliteVersionLong}.tar.gz"
     dest new File(new File(System.getProperty("java.io.tmpdir")), "sqlite-autoconf-${sqliteVersionLong}.tar.gz")
     overwrite false
 }

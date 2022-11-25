@@ -26,7 +26,7 @@ public class SpatiaLiteLoaderImpl implements SpatiaLiteLoader {
 
   @Override
   public String getName() {
-    return "spatialite-5.0.1-2";
+    return "spatialite-5.0.1-3";
   }
 
   @Override
