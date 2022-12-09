@@ -10,29 +10,56 @@ package de.ii.xtraplatform.proj.domain;
 import com.github.azahnen.dagger.annotations.AutoBind;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import de.ii.xtraplatform.base.domain.AppConfiguration;
-import de.ii.xtraplatform.base.domain.AppContext;
+import de.ii.xtraplatform.base.domain.AppLifeCycle;
+import de.ii.xtraplatform.base.domain.LogContext;
+import de.ii.xtraplatform.store.domain.BlobStore;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 @AutoBind
-public class ProjLoaderImpl implements ProjLoader {
+public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
 
-  private final Path dataDirectory;
+  private static final Logger LOGGER = LoggerFactory.getLogger(ProjLoaderImpl.class);
+  private static final String RESOURCES_PATH = "proj";
+
+  private final BlobStore blobStore;
+  private Optional<Path> dataDirectory;
 
   @Inject
-  public ProjLoaderImpl(AppContext appContext) {
-    this.dataDirectory = getDataDirectory(appContext.getDataDir(), appContext.getConfiguration());
+  public ProjLoaderImpl(BlobStore blobStore) {
+    this.blobStore = blobStore.with(RESOURCES_PATH);
+    this.dataDirectory = Optional.empty();
   }
 
   // for unit tests only
   ProjLoaderImpl(Path dataDirectory) {
-    this.dataDirectory = dataDirectory;
+    this.dataDirectory = Optional.ofNullable(dataDirectory);
+    this.blobStore = null;
+  }
+
+  @Override
+  public int getPriority() {
+    return 900;
+  }
+
+  @Override
+  public void onStart() {
+    if (dataDirectory.isEmpty() && Objects.nonNull(blobStore)) {
+      try {
+        this.dataDirectory = blobStore.asLocalPath(Path.of(""), true);
+      } catch (IOException e) {
+        LogContext.error(LOGGER, e, "Could not initialize PROJ data directory");
+      }
+    }
   }
 
   @Override
@@ -56,8 +83,12 @@ public class ProjLoaderImpl implements ProjLoader {
 
   @Override
   public Map<Path, List<String>> getResources() {
+    if (dataDirectory.isEmpty()) {
+      return ImmutableMap.of();
+    }
+
     return ImmutableMap.of(
-        dataDirectory,
+        dataDirectory.get(),
         ImmutableList.of(
             "CH",
             "deformation_model.schema.json",
@@ -77,21 +108,7 @@ public class ProjLoaderImpl implements ProjLoader {
   }
 
   @Override
-  public void preload() {
-    // sqLiteLoader.load();
-  }
-
-  @Override
   public Path getDataDirectory() {
-    return dataDirectory;
-  }
-
-  private Path getDataDirectory(Path dataDir, AppConfiguration configuration) {
-    String projLocation = configuration.proj.location;
-    if (Paths.get(projLocation).isAbsolute()) {
-      return Paths.get(projLocation);
-    }
-
-    return dataDir.resolve(projLocation);
+    return dataDirectory.orElseThrow();
   }
 }
