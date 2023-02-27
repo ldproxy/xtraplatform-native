@@ -26,6 +26,10 @@ dependencies {
     
     embeddedExport files(tasks.findByName('installProjJni'))
     embeddedExport group: 'org.opengis', name: 'geoapi', version: geoApiVersion
+
+    embedded (group: 'tec.units', name: 'unit-ri', version: '1.0.3') {
+        exclude module: 'unit-api'
+    }
 }
 
 configurations.embeddedExport {
@@ -45,6 +49,7 @@ moduleInfo {
         'java.logging',
     ] 
     uses = [
-        'javax.measure.spi.ServiceProvider'
+        'javax.measure.spi.ServiceProvider',
+        'javax.measure.spi.SystemOfUnitsService'
     ]
 }
