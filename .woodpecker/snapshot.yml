@@ -5,8 +5,10 @@ matrix:
   include:
     - platform: linux/amd64
       image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
+      setup: echo
     - platform: linux/arm64
       image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
+      setup: echo
     - platform: darwin/arm64
       image: bash
       # override default /cache/gradle which does not exist on local
