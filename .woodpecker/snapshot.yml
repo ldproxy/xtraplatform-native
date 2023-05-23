@@ -9,24 +9,23 @@ matrix:
       image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
     - platform: darwin/arm64
       image: bash
+      # override default /cache/gradle which does not exist on local
+      setup: export GRADLE_USER_HOME=$${CI_WORKSPACE}/.gradle
 
 platform: ${platform}
 
 clone:
    git:
+     # needs to match default to work on local, otherwise define in matrix
      image: docker.io/woodpeckerci/plugin-git:2.0.3
      settings:
+       # lfs does not work on local despite using the same plugin-git version
        lfs: false
 
 pipeline:
   publish:
     image: ${image}
     commands:
+      - ${setup}
       - ./gradlew clean publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
-
-#  libs.linux-arm_64:
-#    image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
-#    commands:
-#      - ./gradlew clean publish -Pbranch=$CI_COMMIT_BRANCH -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
-#    secrets: [ deploy_user, deploy_password]
