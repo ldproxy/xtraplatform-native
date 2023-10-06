@@ -12,7 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import de.ii.xtraplatform.base.domain.AppLifeCycle;
 import de.ii.xtraplatform.base.domain.LogContext;
-import de.ii.xtraplatform.store.domain.BlobStore;
+import de.ii.xtraplatform.blobs.domain.BlobStore;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
