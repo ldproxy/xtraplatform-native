@@ -1,24 +1,33 @@
+when:
+  event: tag
 
-clone: 
-  git:
-    image: woodpeckerci/plugin-git
-    when:
-      event: tag
+matrix:
+  include:
+    - platform: linux/amd64
+      image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
+      setup: echo
+    - platform: linux/arm64
+      image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
+      setup: echo
+    - platform: darwin/arm64
+      image: bash
+      # override default /cache/gradle which does not exist on local
+      setup: export GRADLE_USER_HOME=$${CI_WORKSPACE}/.gradle
+
+platform: ${platform}
+
+clone:
+   git:
+     # to override clone settings, image needs to match default to work on local
+     image: docker.io/woodpeckerci/plugin-git:2.1.1
+     settings:
+       # lfs does not work on local despite using the same plugin-git version
+       lfs: false
 
 pipeline:
-
-  libs.linux-x86_64:
-    image: docker.ci.interactive-instruments.de/cicd/rhel-7-gcc73
+  publish:
+    image: ${image}
     commands:
+      - ${setup}
       - ./gradlew clean publish -Prelease=true -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
     secrets: [ deploy_user, deploy_password]
-    when:
-      event: tag
-
-  libs.linux-arm_64:
-    image: docker.ci.interactive-instruments.de/cicd/openjdk-11-arm64-gcc102
-    commands:
-      - ./gradlew clean publish -Prelease=true -PdeployUser=$DEPLOY_USER -PdeployPassword=$DEPLOY_PASSWORD
-    secrets: [ deploy_user, deploy_password]
-    when:
-      event: tag
