@@ -18,8 +18,8 @@ platform: ${platform}
 
 clone:
    git:
-     # needs to match default to work on local, otherwise define in matrix
-     image: docker.io/woodpeckerci/plugin-git:2.0.3
+     # to override clone settings, image needs to match default to work on local, otherwise define in matrix
+     image: docker.io/woodpeckerci/plugin-git:2.1.1
      settings:
        # lfs does not work on local despite using the same plugin-git version
        lfs: false
