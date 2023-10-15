@@ -12,7 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import de.ii.xtraplatform.base.domain.AppLifeCycle;
 import de.ii.xtraplatform.base.domain.LogContext;
-import de.ii.xtraplatform.blobs.domain.BlobStore;
+import de.ii.xtraplatform.blobs.domain.ResourceStore;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -31,11 +31,11 @@ public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
   private static final Logger LOGGER = LoggerFactory.getLogger(ProjLoaderImpl.class);
   private static final String RESOURCES_PATH = "proj";
 
-  private final BlobStore blobStore;
+  private final ResourceStore blobStore;
   private Optional<Path> dataDirectory;
 
   @Inject
-  public ProjLoaderImpl(BlobStore blobStore) {
+  public ProjLoaderImpl(ResourceStore blobStore) {
     this.blobStore = blobStore.with(RESOURCES_PATH);
     this.dataDirectory = Optional.empty();
   }
