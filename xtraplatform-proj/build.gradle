@@ -6,7 +6,7 @@ maturity = 'CANDIDATE'
 
 ext {
     //TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
-    projVersion = '9.1.0'
+    projVersion = '9.3.0'
     buildVersion = '1'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/lib")
