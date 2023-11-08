@@ -11,14 +11,10 @@ import com.github.azahnen.dagger.annotations.AutoBind;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import de.ii.xtraplatform.base.domain.AppLifeCycle;
-import de.ii.xtraplatform.base.domain.LogContext;
-import de.ii.xtraplatform.blobs.domain.BlobStore;
-import java.io.IOException;
+import de.ii.xtraplatform.nativ.loader.domain.XtraplatformNative;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
@@ -29,42 +25,21 @@ import org.slf4j.LoggerFactory;
 public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ProjLoaderImpl.class);
-  private static final String RESOURCES_PATH = "proj";
-
-  private final BlobStore blobStore;
-  private Optional<Path> dataDirectory;
+  private final Path dataDirectory;
 
   @Inject
-  public ProjLoaderImpl(BlobStore blobStore) {
-    this.blobStore = blobStore.with(RESOURCES_PATH);
-    this.dataDirectory = Optional.empty();
+  public ProjLoaderImpl() {
+    this.dataDirectory = XtraplatformNative.getDataPath(getName());
   }
 
   // for unit tests only
   ProjLoaderImpl(Path dataDirectory) {
-    this.dataDirectory = Optional.ofNullable(dataDirectory);
-    this.blobStore = null;
-  }
-
-  @Override
-  public int getPriority() {
-    return 900;
-  }
-
-  @Override
-  public void onStart() {
-    if (dataDirectory.isEmpty() && Objects.nonNull(blobStore)) {
-      try {
-        this.dataDirectory = blobStore.asLocalPath(Path.of(""), true);
-      } catch (IOException e) {
-        LogContext.error(LOGGER, e, "Could not initialize PROJ data directory");
-      }
-    }
+    this.dataDirectory = dataDirectory;
   }
 
   @Override
   public String getName() {
-    return "proj-9.1.0-1";
+    return "proj-9.3.0-1";
   }
 
   @Override
@@ -83,12 +58,8 @@ public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
 
   @Override
   public Map<Path, List<String>> getResources() {
-    if (dataDirectory.isEmpty()) {
-      return ImmutableMap.of();
-    }
-
     return ImmutableMap.of(
-        dataDirectory.get(),
+        dataDirectory,
         ImmutableList.of(
             "CH",
             "deformation_model.schema.json",
@@ -109,6 +80,6 @@ public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
 
   @Override
   public Path getDataDirectory() {
-    return dataDirectory.orElseThrow();
+    return dataDirectory;
   }
 }

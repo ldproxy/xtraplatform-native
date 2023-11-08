@@ -65,6 +65,10 @@ public class XtraplatformNative {
     return TMP_DIR.resolve(parentName).resolve(LIB_DIR_NAME);
   }
 
+  public static Path getDataPath(String parentName) {
+    return TMP_DIR.resolve(parentName).resolve(DATA_DIR_NAME);
+  }
+
   private static void copyLibToTmpDir(Class<?> contextClass, String parentName, String resource) {
     File lib = getLibPath(parentName).resolve(resource).toFile();
     if (!lib.exists()) {
