@@ -10,7 +10,7 @@ allprojects {
 version = "2.4.0-${platform}${versionSuffix}"
 
 dependencies {
-    layers group: 'de.interactive_instruments', name: 'xtraplatform-core', version: '6.0.0-SNAPSHOT'
+    layers group: 'de.interactive_instruments', name: 'xtraplatform-core', version: '6.0.0-build-SNAPSHOT'
 
     modules subprojects
 }
