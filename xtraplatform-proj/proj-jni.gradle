@@ -72,5 +72,5 @@ tasks.register('installProjJni', Exec) {
 }
 
 tasks.compileJava.dependsOn tasks.named('installProjJni')
-tasks.installProjJni.mustRunAfter {tasks.named('embedResources')}
-tasks.getProjJni.mustRunAfter {tasks.named('embedResources')}
+tasks.installProjJni.finalizedBy {tasks.named('embedResources')}
+tasks.getProjJni.finalizedBy {tasks.named('embedResources')}
