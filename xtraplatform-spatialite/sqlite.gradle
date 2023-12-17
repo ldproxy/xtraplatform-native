@@ -13,7 +13,7 @@ ext {
 
 task downloadSQLite(type: Download) {
     src "https://www.sqlite.org/2022/sqlite-autoconf-${sqliteVersionLong}.tar.gz"
-    dest new File(new File(System.getProperty("java.io.tmpdir")), "sqlite-autoconf-${sqliteVersionLong}.tar.gz")
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "spatialite/sqlite-autoconf-${sqliteVersionLong}.tar.gz")
     overwrite false
 }
 
