@@ -3,6 +3,9 @@ plugins {
 }
 
 maturity = 'CANDIDATE'
+maintenance = 'FULL'
+description = 'PROJ integration and Java API.'
+docIgnore = true
 
 ext {
     //TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)

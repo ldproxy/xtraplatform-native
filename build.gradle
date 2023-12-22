@@ -1,6 +1,6 @@
 plugins {
-    id 'de.interactive_instruments.xtraplatform-layer' version '5.0.0-SNAPSHOT'
-    id "com.diffplug.spotless" version "6.15.0" apply false
+    id 'de.interactive_instruments.xtraplatform-layer' version '5.1.0'
+    id "com.diffplug.spotless" version "6.23.3" apply false
 }
 
 allprojects {
@@ -10,7 +10,7 @@ allprojects {
 version = "2.4.0-${platform}${versionSuffix}"
 
 dependencies {
-    layers group: 'de.interactive_instruments', name: 'xtraplatform-core', version: '6.0.0-build-SNAPSHOT'
+    layers group: 'de.interactive_instruments', name: 'xtraplatform-core', version: '6.0.0-SNAPSHOT'
 
     modules subprojects
 }

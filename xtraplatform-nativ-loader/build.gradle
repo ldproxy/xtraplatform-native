@@ -1,0 +1,4 @@
+maturity = 'CANDIDATE'
+maintenance = 'FULL'
+description = 'Native library loader.'
+docIgnore = true

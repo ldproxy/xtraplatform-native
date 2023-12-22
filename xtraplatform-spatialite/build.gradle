@@ -3,6 +3,9 @@ plugins {
 }
 
 maturity = 'CANDIDATE'
+maintenance = 'FULL'
+description = 'SpatiaLite integration.'
+docIgnore = true
 
 ext {
     //TODO: when changed, adjust SpatiaLiteLoaderImpl.getName (can we inject it?)
