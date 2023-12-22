@@ -14,17 +14,10 @@ matrix:
       # override default /cache/gradle which does not exist on local
       setup: export GRADLE_USER_HOME=$${CI_WORKSPACE}/.gradle
 
-platform: ${platform}
+labels:
+  platform: ${platform}
 
-clone:
-   git:
-     # to override clone settings, image needs to match default to work on local
-     image: docker.io/woodpeckerci/plugin-git:2.1.1
-     settings:
-       # lfs does not work on local despite using the same plugin-git version
-       lfs: false
-
-pipeline:
+steps:
   publish:
     image: ${image}
     commands:
