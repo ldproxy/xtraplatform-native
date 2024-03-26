@@ -1,6 +1,6 @@
 
 ext {
-    geosVersion = '3.9.2'
+    geosVersion = '3.9.5'
 }
 
 ext {
@@ -41,7 +41,15 @@ task buildGeos2(type: Exec) {
     workingDir geosBuildDir
     commandLine 'chmod', '+x', "${geosConfig}"
 }
-task configureGeos(dependsOn: [getGeos], type: Exec) {
+
+task patchGeos(dependsOn: getGeos, type: Exec) {
+    inputs.file("${geosBuildDir}/../../patches/WKBWriter.h.patch")
+    outputs.file("${geosBuildDir}/include/geos/io/WKBWriter.h")
+    workingDir geosBuildDir
+    commandLine "patch", "include/geos/io/WKBWriter.h", "../../patches/WKBWriter.h.patch"
+}
+
+task configureGeos(dependsOn: [patchGeos], type: Exec) {
     finalizedBy buildGeos2
     outputs.dir geosBuildDir
     workingDir geosBuildDir
