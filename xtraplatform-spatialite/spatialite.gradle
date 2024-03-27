@@ -36,13 +36,29 @@ task getSpatialite(dependsOn: downloadSpatialite, type: Copy) {
     }
 }
 
-task configureSpatialite(dependsOn: [getSpatialite, buildZlib, buildSQLite, buildGeos], type: Exec) {
+task patchSpatialite(dependsOn: getSpatialite, type: Exec) {
+    inputs.file("${spatialiteBuildDir}/../../patches/configure-big_sur.diff")
+    inputs.file("${spatialiteBuildDir}/../../patches/configure-big_sur-2.diff")
+    outputs.file("${spatialiteBuildDir}/configure")
+    workingDir spatialiteBuildDir
+    commandLine "patch", "configure", "../../patches/configure-big_sur.diff"
+    doLast {
+      exec { 
+        workingDir spatialiteBuildDir
+        commandLine "patch", "configure", "../../patches/configure-big_sur-2.diff"     
+      }
+    }
+}
+
+task configureSpatialite(dependsOn: [patchSpatialite, buildZlib, buildSQLite, buildGeos], type: Exec) {
     outputs.dir spatialiteBuildDir
     workingDir spatialiteBuildDir
     environment "CPPFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     environment "CFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     environment "LDFLAGS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
-    commandLine './configure', '--enable-module-only', '--enable-shared', '--disable-static', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-knn=no',  '--enable-mathsql=n', "--with-geosconfig=${geosConfig}", "${rootProject.osdetector.arch}-unknown-linux-gnu"
+    environment "SQLITE3_CFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
+    environment "SQLITE3_LIBS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
+    commandLine './configure', '--enable-module-only', '--enable-shared', '--disable-static', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-mathsql=n', "--with-geosconfig=${geosConfig}"
     doLast {
         println "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     }
