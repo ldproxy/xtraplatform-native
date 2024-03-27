@@ -6,7 +6,7 @@ ext {
 }
 
 task downloadSpatialite(type: Download) {
-    src "http://www.gaia-gis.it/gaia-sins/libspatialite-${spatialiteVersion}.tar.gz"
+    src "http://www.gaia-gis.it/gaia-sins/libspatialite-sources/libspatialite-${spatialiteVersion}.tar.gz"
     dest new File(new File(System.getProperty("java.io.tmpdir")), "libspatialite-${spatialiteVersion}.tar.gz")
     overwrite false
 }

@@ -9,8 +9,8 @@ docIgnore = true
 
 ext {
     //TODO: when changed, adjust SpatiaLiteLoaderImpl.getName (can we inject it?)
-    spatialiteVersion = '5.0.1'
-    buildVersion = '3'
+    spatialiteVersion = '5.1.0'
+    buildVersion = '0'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "spatialite-${spatialiteVersion}-${buildVersion}/lib")
     embeddedDataDir = new File(generatedResourcesDir, "spatialite-${spatialiteVersion}-${buildVersion}/data")

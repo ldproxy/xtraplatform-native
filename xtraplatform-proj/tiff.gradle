@@ -1,6 +1,6 @@
 
 ext {
-    tiffVersion = '4.3.0'
+    tiffVersion = '4.6.0'
 }
 
 ext {

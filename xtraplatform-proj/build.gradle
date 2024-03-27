@@ -9,8 +9,8 @@ docIgnore = true
 
 ext {
     //TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
-    projVersion = '9.3.0'
-    buildVersion = '1'
+    projVersion = '9.4.0'
+    buildVersion = '0'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/lib")
     embeddedDataDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/data")
