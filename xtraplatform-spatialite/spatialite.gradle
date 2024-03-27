@@ -37,6 +37,7 @@ task getSpatialite(dependsOn: downloadSpatialite, type: Copy) {
 }
 
 task patchSpatialite(dependsOn: getSpatialite, type: Exec) {
+    onlyIf { new File("/usr/bin/patch").exists() }
     inputs.file("${spatialiteBuildDir}/../../patches/configure-big_sur.diff")
     inputs.file("${spatialiteBuildDir}/../../patches/configure-big_sur-2.diff")
     outputs.file("${spatialiteBuildDir}/configure")
@@ -58,7 +59,7 @@ task configureSpatialite(dependsOn: [patchSpatialite, buildZlib, buildSQLite, bu
     environment "LDFLAGS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
     environment "SQLITE3_CFLAGS", "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     environment "SQLITE3_LIBS", "-L${zlibBuildDir} -L${sqliteLibDir} -L${geosLibDir}"
-    commandLine './configure', '--enable-module-only', '--enable-shared', '--disable-static', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-mathsql=n', "--with-geosconfig=${geosConfig}"
+    commandLine './configure', '--enable-module-only', '--enable-shared', '--disable-static', '--enable-examples=no', '--enable-minizip=no', '--enable-libxml2=no', '--enable-rttopo=no', '--enable-gcp=no', '--enable-geos=yes', '--enable-epsg=no', '--enable-freexl=no', '--enable-proj=no', '--enable-mathsql=n', "--with-geosconfig=${geosConfig}", "${rootProject.osdetector.os}" == "linux" ? "${rootProject.osdetector.arch}-unknown-linux-gnu" : ""
     doLast {
         println "-I${zlibBuildDir} -I${geosIncludeDir} -I${geosIncludeDir2} -I${sqliteBuildDir}"
     }
