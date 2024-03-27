@@ -39,7 +39,7 @@ public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
 
   @Override
   public String getName() {
-    return "proj-9.4.0-0";
+    return "proj-9.3.1-0";
   }
 
   @Override
