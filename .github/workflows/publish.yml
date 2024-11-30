@@ -1,0 +1,30 @@
+name: publish
+
+on: [push]
+
+#TODO: test with rhel-7
+jobs:
+  build_libraries:
+    runs-on: ${{ matrix.os.runner }}
+    strategy:
+      matrix:
+        os:
+          - runner: ubuntu-latest
+            type: linux
+            platform: linux-amd64
+          #- runner: buildjet-2vcpu-ubuntu-2204-arm
+          #  type: linux
+          #  platform: linux-arm64
+          - runner: macos-latest
+            type: macos
+            platform: darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: gradle
+      - name: java
+        run: |
+          ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
