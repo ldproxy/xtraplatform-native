@@ -65,12 +65,12 @@ task buildProjJni(dependsOn: configureProjJni, type: Exec) {
 tasks.register('installProjJni', Exec) {
     dependsOn getMaven
     dependsOn buildProjJni
-    finalizedBy 'embedClasses'
+//    finalizedBy 'embedClasses'
     outputs.file new File(projJniBuildDir, "target/proj-${projJniVersion}.jar")
     workingDir projJniBuildDir
     commandLine new File(mavenBinDir, 'mvn').toString(), '-D', 'skipTests=true', 'package' //TODO: set library path instead of skipTests
 }
 
 tasks.compileJava.dependsOn tasks.named('installProjJni')
-tasks.installProjJni.finalizedBy {tasks.named('embedResources')}
-tasks.getProjJni.finalizedBy {tasks.named('embedResources')}
+//tasks.installProjJni.finalizedBy {tasks.named('embedResources')}
+//tasks.getProjJni.finalizedBy {tasks.named('embedResources')}
