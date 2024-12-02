@@ -13,3 +13,4 @@ xtraplatform-cql/src/main/gen/
 .DS_Store
 xtraplatform-cql/src/main/antlr/de/ii/xtraplatform/cql/infra/gen/
 libs/
+gradle.properties

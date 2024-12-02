@@ -37,7 +37,7 @@ task getTiff(dependsOn: downloadTiff, type: Copy) {
 task configureTiff(dependsOn: [getTiff, buildZlib], type: Exec) {
     outputs.dir tiffBuildDir
     workingDir tiffBuildDir
-    commandLine './configure', '--enable-static=false', '--disable-pixarlog', '--disable-cxx', "--with-zlib-include-dir=${zlibBuildDir}", "--with-zlib-lib-dir=${zlibBuildDir}"
+    commandLine './configure', '--enable-static=false', '--disable-pixarlog', '--disable-cxx', '--disable-libdeflate', '--disable-jbig', '--disable-jpeg', "--with-zlib-include-dir=${zlibBuildDir}", "--with-zlib-lib-dir=${zlibBuildDir}"
 }
 
 task buildTiff(dependsOn: configureTiff, type: Exec) {
