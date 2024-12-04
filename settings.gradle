@@ -23,13 +23,14 @@ plugins {
     id "de.interactive_instruments.xtraplatform-settings" version "6.1.0-SNAPSHOT"
 }
 
-xtraplatform {
-    //useMavenLocal()
+ext {
+    coreVersion = '6.3.0-build-plugins-SNAPSHOT'
+}
 
-    layer group: 'de.interactive_instruments', name: 'xtraplatform-core', version: '6.3.0-build-plugins-SNAPSHOT'
+xtraplatform {
+    includeOnlyIf { layer -> gradle.parent != null || settings.hasProperty('inc')  }
+
+    layerInclude name: 'xtraplatform-core', group: 'de.interactive_instruments', version: coreVersion, path: '../', dir: 'xtraplatform'
 }
 
 rootProject.name = 'xtraplatform-native'
-
-//includeBuild '../xtraplatform-build'
-//includeBuild '../xtraplatform/xtraplatform-core'
