@@ -20,11 +20,15 @@ buildscript {
 }
 
 plugins {
-    id "de.interactive_instruments.xtraplatform-settings" version "6.1.0-SNAPSHOT"
+    id "de.interactive_instruments.xtraplatform-settings" version "6.1.1"
 }
 
+def versions =  xtraplatform.getCatalogVersions(file("gradle/layers.versions.toml"))
+
 ext {
-    coreVersion = '6.3.0-build-plugins-SNAPSHOT'
+    coreVersionCatalog = versions['xtraplatform-core']
+
+    coreVersion = settings.hasProperty('coreVersionExt') ? settings.getProperty('coreVersionExt') : coreVersionCatalog
 }
 
 xtraplatform {
