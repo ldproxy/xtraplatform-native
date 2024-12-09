@@ -12,9 +12,9 @@ jobs:
           - runner: ubuntu-latest
             type: linux
             platform: linux-amd64
-          #- runner: buildjet-2vcpu-ubuntu-2204-arm
-          #  type: linux
-          #  platform: linux-arm64
+          - runner: buildjet-2vcpu-ubuntu-2204-arm
+            type: linux
+            platform: linux-arm64
           - runner: macos-latest
             type: macos
             platform: darwin-arm64
