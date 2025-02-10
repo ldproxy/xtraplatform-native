@@ -8,12 +8,10 @@ jobs:
     strategy:
       matrix:
         os:
-# linux-amd64 has to be built in woodpecker for rhel9 support
-#          - runner: ubuntu-22.04
-#            type: linux
-#            platform: linux-amd64
+          - runner: ubuntu-22.04
+            type: linux
+            platform: linux-amd64
           - runner: ubuntu-22.04-arm
-#          - runner: buildjet-2vcpu-ubuntu-2204-arm
             type: linux
             platform: linux-arm64
           - runner: macos-latest
@@ -21,15 +19,26 @@ jobs:
             platform: darwin-arm64
     steps:
       - uses: actions/checkout@v4
-      - if: ${{ matrix.os.type == 'linux' }}
-        uses: egor-tensin/setup-gcc@v1
-        with:
-          version: latest
+
       - uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
           cache: gradle
-      - name: java
+
+      - if: ${{ matrix.os.platform != 'linux-amd64' }}
+        name: java
         run: |
           ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+
+      - if: ${{ matrix.os.platform == 'linux-amd64' }}
+        name: java rhel9
+        uses: kohlerdominik/docker-run-action@v2
+        with:
+          image: almalinux:9
+          environment: |
+            JAVA_HOME=/usr
+          run: |
+            dnf update -y
+            dnf install -y java-17-openjdk-devel g++ cmake
+            ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
