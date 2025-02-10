@@ -33,7 +33,7 @@ jobs:
 
       - if: ${{ matrix.os.platform == 'linux-amd64' }}
         name: java rhel9
-        uses: kohlerdominik/docker-run-action@v2
+        uses: kohlerdominik/docker-run-action@v2.0.0
         with:
           image: almalinux:9
           environment: |
