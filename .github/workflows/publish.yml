@@ -8,9 +8,10 @@ jobs:
     strategy:
       matrix:
         os:
-          - runner: ubuntu-22.04
-            type: linux
-            platform: linux-amd64
+# linux-amd64 has to be built in woodpecker for rhel9 support
+#          - runner: ubuntu-22.04
+#            type: linux
+#            platform: linux-amd64
           - runner: ubuntu-22.04-arm
 #          - runner: buildjet-2vcpu-ubuntu-2204-arm
             type: linux
@@ -23,7 +24,7 @@ jobs:
       - if: ${{ matrix.os.type == 'linux' }}
         uses: egor-tensin/setup-gcc@v1
         with:
-          version: 9
+          version: latest
       - uses: actions/setup-java@v4
         with:
           java-version: "17"
