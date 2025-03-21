@@ -1,6 +1,11 @@
-name: publish
+name: release
 
-on: [push]
+on:
+  push:
+    tags:
+    - '**'
+    branches-ignore:
+      - '**'
 
 jobs:
   build_libraries:
@@ -29,7 +34,7 @@ jobs:
       - if: ${{ matrix.os.platform != 'linux-amd64' }}
         name: java
         run: |
-          ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+          ./gradlew publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
 
       - if: ${{ matrix.os.platform == 'linux-amd64' }}
         name: java rhel9
@@ -46,4 +51,4 @@ jobs:
             dnf install -y java-17-openjdk-devel g++ cmake
             pwd
             ls -l
-            ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+            ./gradlew publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
