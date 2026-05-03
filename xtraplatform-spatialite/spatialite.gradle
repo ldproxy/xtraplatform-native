@@ -36,6 +36,11 @@ task getSpatialite(dependsOn: downloadSpatialite, type: Copy) {
     }
 }
 
+interface InjectedExecOps {
+    @Inject //@javax.inject.Inject
+    ExecOperations getExecOps()
+}
+
 task patchSpatialite(dependsOn: getSpatialite, type: Exec) {
     onlyIf { new File("/usr/bin/patch").exists() }
     inputs.file("${spatialiteBuildDir}/../../patches/configure-big_sur.diff")
@@ -43,8 +48,9 @@ task patchSpatialite(dependsOn: getSpatialite, type: Exec) {
     outputs.file("${spatialiteBuildDir}/configure")
     workingDir spatialiteBuildDir
     commandLine "patch", "configure", "../../patches/configure-big_sur.diff"
+    def injected = project.objects.newInstance(InjectedExecOps)
     doLast {
-      exec { 
+      injected.execOps.exec {
         workingDir spatialiteBuildDir
         commandLine "patch", "configure", "../../patches/configure-big_sur-2.diff"     
       }
