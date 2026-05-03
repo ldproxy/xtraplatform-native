@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: "17"
+          java-version: "25"
           distribution: "temurin"
           cache: gradle
 
@@ -48,7 +48,7 @@ jobs:
             JAVA_HOME=/usr
           run: |
             dnf update -y
-            dnf install -y java-17-openjdk-devel g++ cmake
+            dnf install -y java-25-openjdk-devel g++ cmake
             pwd
             ls -l
             ./gradlew publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
