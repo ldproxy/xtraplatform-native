@@ -31,6 +31,10 @@ jobs:
           distribution: "temurin"
           cache: gradle
 
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 3.28.3
+
       - if: ${{ matrix.os.platform != 'linux-amd64' }}
         name: java
         run: |
