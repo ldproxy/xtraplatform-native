@@ -12,11 +12,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import de.ii.xtraplatform.base.domain.AppLifeCycle;
 import de.ii.xtraplatform.nativ.loader.domain.XtraplatformNative;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class ProjLoaderImpl implements ProjLoader, AppLifeCycle {
   }
 
   @Override
-  public String getName() {
+  public final String getName() {
     return "proj-9.3.1-0";
   }
 
