@@ -6,4 +6,4 @@ allprojects {
     group = 'de.interactive_instruments'
 }
 
-version = "2.5.0-${platform}${versionSuffix}"
+version = "2.6.0-${platform}${versionSuffix}"
