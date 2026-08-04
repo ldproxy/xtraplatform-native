@@ -38,7 +38,7 @@ jobs:
       - if: ${{ matrix.os.platform != 'linux-amd64' }}
         name: java
         run: |
-          ./gradlew publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+          ./gradlew --no-parallel --no-configuration-cache publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
 
       - if: ${{ matrix.os.platform == 'linux-amd64' }}
         name: java rhel9
@@ -55,4 +55,4 @@ jobs:
             dnf install -y java-25-openjdk-devel g++ cmake
             pwd
             ls -l
-            ./gradlew publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+            ./gradlew --no-parallel --no-configuration-cache publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
