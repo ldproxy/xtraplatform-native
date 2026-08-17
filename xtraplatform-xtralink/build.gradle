@@ -1,0 +1,105 @@
+plugins {
+    id "de.undercouch.download" version "4.1.2"
+}
+
+maturity = 'MATURE'
+maintenance = 'FULL'
+description = 'xtralink integration, jobs and store.'
+//docIgnore = true
+
+ext {
+    xtralinkVersion = '0.9.3'
+    buildVersion = '0'
+    xtralinkBuildDir = new File(buildDir, 'xtralink')
+    xtralinkLibDir = new File(xtralinkBuildDir, 'dist')
+    xtralinkLibName = project.osdetector.os == 'osx' ? 'libxtralink.dylib' : 'libxtralink.so'
+    generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
+    embeddedLibDir = new File(generatedResourcesDir, "xtralink-${xtralinkVersion}-${buildVersion}/lib")
+}
+
+dependencies {
+    provided project(':xtraplatform-nativ-loader')
+
+    embedded name: "xtralink-${xtralinkVersion}"
+}
+
+project.sourceSets.main.output.dir(generatedResourcesDir)
+
+def downloadXtralink = tasks.register('downloadXtralink', Download, {
+    src "https://github.com/ldproxy/xtralink/archive/refs/tags/v${xtralinkVersion}.tar.gz"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "xtralink-${xtralinkVersion}.tar.gz")
+    overwrite false
+})
+
+def getXtralink = tasks.register('getXtralink', Copy, {
+    dependsOn downloadXtralink
+    from(tarTree(downloadXtralink.get().dest)) {
+        eachFile { fcd ->
+            fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))
+        }
+        includeEmptyDirs = false
+    }
+    //from(new File(projectDir, '../../../ws-xtrahub/xtralink'))
+    //exclude 'data/**'
+
+    into xtralinkBuildDir
+    def copyDetails = []
+    eachFile { copyDetails << it }
+    doLast {
+        copyDetails.each { FileCopyDetails details ->
+            def target = new File(destinationDir, details.path)
+            if(target.exists()) { target.setLastModified(details.lastModified) }
+        }
+    }
+})
+
+tasks.register('buildXtralink', Exec, {
+    dependsOn(tasks.getXtralink)
+    inputs.dir xtralinkBuildDir
+    workingDir new File(xtralinkBuildDir, 'ffi/clib/main')
+    commandLine 'make', 'shared', 'OUT=../../../dist/'
+})
+
+def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
+    dependsOn(tasks.getXtralink)
+    inputs.dir xtralinkBuildDir
+    workingDir new File(xtralinkBuildDir, 'ffi/java')
+    commandLine './gradlew', 'build'
+})
+
+def copyXtralinkLib = tasks.register('copyXtralinkLib', Copy, {
+    dependsOn tasks.buildXtralink
+    from(xtralinkLibDir) {
+        include xtralinkLibName
+    }
+    into embeddedLibDir
+})
+
+tasks.named('jar') {
+    dependsOn copyXtralinkLib
+}
+tasks.named('cyclonedxDirectBom') {
+    dependsOn buildXtralinkJava
+}
+tasks.withType(Pmd).configureEach {
+    dependsOn copyXtralinkLib
+}
+
+project.subprojects { Project subproject ->
+    if (subproject.name.endsWith("-tpl")) {
+        subproject.afterEvaluate {
+            subproject.tasks.named("compileJava") {
+                dependsOn buildXtralinkJava
+            }
+            subproject.tasks.named("cyclonedxDirectBom") {
+                dependsOn buildXtralinkJava
+            }
+            subproject.tasks.named("javadocJar") {
+                dependsOn buildXtralinkJava
+            }
+            subproject.tasks.named("sourcesJar") {
+                dependsOn buildXtralinkJava
+            }
+        }
+    }
+}

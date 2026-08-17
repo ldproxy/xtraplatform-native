@@ -38,3 +38,11 @@ xtraplatform {
 }
 
 rootProject.name = 'xtraplatform-native'
+
+dependencyResolutionManagement {
+    repositories {
+        flatDir {
+            dirs 'xtraplatform-xtralink/build/xtralink/ffi/java/build/libs/'
+        }
+    }
+}
