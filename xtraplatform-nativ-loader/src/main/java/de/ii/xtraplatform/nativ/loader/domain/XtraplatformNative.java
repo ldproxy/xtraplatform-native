@@ -9,6 +9,7 @@ package de.ii.xtraplatform.nativ.loader.domain;
 
 import static de.ii.xtraplatform.base.domain.Constants.TMP_DIR_PROP;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import java.io.File;
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 @SuppressWarnings("PMD.AvoidCatchingGenericException")
 public final class XtraplatformNative {
@@ -27,10 +29,13 @@ public final class XtraplatformNative {
 
   private XtraplatformNative() {}
 
-  public static void copyLibsToTmpDir(
+  public static Map<String, Path> copyLibsToTmpDir(
       Class<?> contextClass, List<String> libs, String parentName, String parentLabel) {
 
-    libs.forEach(lib -> copyLibToTmpDir(contextClass, parentName, lib));
+    return libs.stream()
+        .collect(
+            ImmutableMap.toImmutableMap(
+                Function.identity(), lib -> copyLibToTmpDir(contextClass, parentName, lib)));
   }
 
   public static void loadLibs(List<String> libs, String parentName) {
@@ -68,8 +73,9 @@ public final class XtraplatformNative {
     return TMP_DIR.resolve(parentName).resolve(DATA_DIR_NAME);
   }
 
-  private static void copyLibToTmpDir(Class<?> contextClass, String parentName, String resource) {
+  private static Path copyLibToTmpDir(Class<?> contextClass, String parentName, String resource) {
     File lib = getLibPath(parentName).resolve(resource).toFile();
+
     if (!lib.exists()) {
       try {
         Files.createDirectories(lib.getParentFile().toPath());
@@ -81,6 +87,8 @@ public final class XtraplatformNative {
         throw new IllegalStateException("Could not create file: " + lib, e);
       }
     }
+
+    return lib.toPath();
   }
 
   private static void loadLib(String parentName, String libName) {

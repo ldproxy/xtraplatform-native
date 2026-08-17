@@ -7,3 +7,16 @@ allprojects {
 }
 
 version = "2.7.0-${platform}${versionSuffix}"
+
+
+//TODO
+layer {
+    MATURE {
+        minimumCoverage = 0.0
+        warningsAsErrors = false
+        ignorePmdErrors = true
+    }
+    CANDIDATE {
+        minimumCoverage = 0.0
+    }
+}

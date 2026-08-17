@@ -15,13 +15,14 @@ import java.util.Map;
 public interface NativeLoader {
 
   default void load() {
-    XtraplatformNative.copyLibsToTmpDir(this.getClass(), getLibraries(), getName(), getLabel());
-    preload();
+    Map<String, Path> paths =
+        XtraplatformNative.copyLibsToTmpDir(this.getClass(), getLibraries(), getName(), getLabel());
+    preload(paths);
     XtraplatformNative.loadLibs(getLibraries(), getName());
     XtraplatformNative.copyResources(this.getClass(), getName(), getResources());
   }
 
-  default void preload() {}
+  default void preload(Map<String, Path> paths) {}
 
   String getName();
 

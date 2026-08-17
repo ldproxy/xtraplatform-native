@@ -55,11 +55,6 @@ public class SpatiaLiteLoaderImpl implements SpatiaLiteLoader {
   }
 
   @Override
-  public void preload() {
-    // sqLiteLoader.load();
-  }
-
-  @Override
   public Path getExtensionPath() {
     return XtraplatformNative.getLibPath(getName()).resolve("mod_spatialite");
   }
