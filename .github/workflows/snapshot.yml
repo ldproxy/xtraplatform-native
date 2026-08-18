@@ -55,7 +55,7 @@ jobs:
             JAVA_HOME=/usr
           run: |
             dnf update -y
-            dnf install -y java-25-openjdk-devel g++ cmake
+            dnf install -y java-25-openjdk-devel g++ cmake go-toolset
             pwd
             ls -l
             ./gradlew --no-parallel --no-configuration-cache :xtraplatform-xtralink:buildXtralinkJava -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
