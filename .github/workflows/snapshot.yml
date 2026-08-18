@@ -31,8 +31,8 @@ jobs:
           distribution: "temurin"
           cache: gradle
       - uses: actions/setup-go@v5
-          with:
-            go-version: "1.26.5"
+        with:
+          go-version: "1.26.5"
       - uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 3.28.3
