@@ -8,7 +8,7 @@ description = 'xtralink integration, jobs and store.'
 //docIgnore = true
 
 ext {
-    xtralinkVersion = '0.9.3'
+    xtralinkVersion = '0.9.4'
     buildVersion = '0'
     xtralinkBuildDir = new File(buildDir, 'xtralink')
     xtralinkLibDir = new File(xtralinkBuildDir, 'dist')

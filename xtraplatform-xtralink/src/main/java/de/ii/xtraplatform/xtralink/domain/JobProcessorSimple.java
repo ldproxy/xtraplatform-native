@@ -1,11 +1,22 @@
+/*
+ * Copyright 2026 interactive instruments GmbH
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package de.ii.xtraplatform.xtralink.domain;
 
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobResult;
 import de.ii.xtralink.jobs.PartialJob;
+import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtraplatform.xtralink.domain.JobContext.JobContextEntity;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class JobProcessorSimple<T extends JobInputs>
     implements JobProcessor<T, JobContextEntity> {
@@ -31,7 +42,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
 
   @Override
   public final Set<String> getKinds() {
-    return Set.of(getKind());
+    return Arrays.stream(Phase.values()).map(this::partialKind).collect(Collectors.toSet());
   }
 
   @Override
@@ -40,11 +51,32 @@ public abstract class JobProcessorSimple<T extends JobInputs>
     T inputs = getInputs(job, jobs);
     Phase phase = getPhase(partialJob);
 
-    return switch (phase) {
-      case SETUP -> setup(partialJob, job, inputs, jobs);
-      case EXECUTE -> execute(partialJob, job, inputs, jobs);
-      case CLEANUP -> cleanup(partialJob, job, inputs, jobs);
-    };
+    try {
+      return switch (phase) {
+        case SETUP -> presetup(partialJob, job, inputs, jobs);
+        case EXECUTE -> execute(partialJob, job, inputs, jobs);
+        case CLEANUP -> cleanup(partialJob, job, inputs, jobs);
+      };
+    } catch (Throwable e) {
+      return jobs.failure(
+          "Error processing job " + job.id() + " in phase " + phase + ": " + e.getMessage());
+      // TODO: passing errors through ffi to go does not work as expected
+      // throw new JobProcessingException("Error processing job " + job.id() + " in phase " + phase,
+      // e);
+    }
+  }
+
+  private JobResult presetup(PartialJob partialJob, Job job, T inputs, JobProcessing jobs) {
+    jobs.init(job.id(), 1, null);
+
+    JobResult setupResult = setup(partialJob, job, inputs, jobs);
+
+    PartialJobConfiguration partial =
+        Jobs.createPartial(
+            partialKind(Phase.EXECUTE), job.priority(), job.id(), job.context(), 1, List.of());
+    jobs.push(partial);
+
+    return setupResult;
   }
 
   @Override

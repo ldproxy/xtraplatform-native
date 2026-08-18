@@ -52,6 +52,7 @@ public interface Jobs {
           .registerModule(new AfterburnerModule())
           .registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
   TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+  String RESOURCE_TYPE = "jobs";
 
   // TODO: add various methods or builder
   static JobConfiguration create(
@@ -123,9 +124,13 @@ public interface Jobs {
     }
   }
 
-  CompletableFuture<Job> push(JobConfiguration job, JobListener onChange);
+  Job push(JobConfiguration job, JobListener onChange);
 
-  default CompletableFuture<Job> push(JobConfiguration job) {
+  default Job push(JobConfiguration job) {
     return push(job, j -> {});
   }
+
+  CompletableFuture<Job> waitFor(String id);
+
+  Optional<Job> get(String id);
 }

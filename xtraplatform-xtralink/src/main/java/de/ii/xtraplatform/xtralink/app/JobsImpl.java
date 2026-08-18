@@ -26,6 +26,7 @@ import de.ii.xtralink.jobs.JobResult;
 import de.ii.xtralink.jobs.PartialJob;
 import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtralink.jobs.QueueConfiguration;
+import de.ii.xtralink.jobs.SetOutputs;
 import de.ii.xtralink.jobs.internal.JobListener;
 import de.ii.xtralink.jobs.internal.JobProcessor.Registration;
 import de.ii.xtralink.jobs.internal.JobQueue;
@@ -76,6 +77,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private final ObjectMapper objectMapper;
   private final Map<String, Status> jobStatus;
   private final Map<String, JobProgress> jobProgress;
+  private final Map<String, JobListener.Registration> jobRegistration;
   private final ScheduledExecutorService polling;
 
   @Inject
@@ -87,7 +89,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         jackson.getDefaultObjectMapper().registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
     this.jobStatus = new ConcurrentHashMap<>();
     this.jobProgress = new ConcurrentHashMap<>();
-
+    this.jobRegistration = new ConcurrentHashMap<>();
     this.polling =
         MoreExecutors.getExitingScheduledExecutorService(
             (ScheduledThreadPoolExecutor)
@@ -165,8 +167,8 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   }
 
   @Override
-  public CompletableFuture<Job> push(JobConfiguration job, JobListener onChange) {
-    LOGGER.info("JOBS: Pushing job: {}", job.label());
+  public Job push(JobConfiguration job, JobListener onChange) {
+    // LOGGER.info("JOBS: Pushing job: {}", job.label());
 
     JobListener onProgress2 =
         (j) -> {
@@ -183,24 +185,43 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
           } else {
             jobStatus.remove(j.id());
             jobProgress.remove(j.id());
+            JobListener.Registration removed = jobRegistration.remove(j.id());
+            if (removed != null) {
+              removed.close();
+            }
           }
 
           onChange.onProgress(j);
         };
+    JobListener.Registration registration = JobListener.register(onProgress2);
 
-    return JobQueue.push(job, onProgress2);
+    Job pushedJob = JobQueue.push(job, registration);
+
+    jobRegistration.put(pushedJob.id(), registration);
+
+    return pushedJob;
   }
 
   @Override
-  public CompletableFuture<PartialJob> push(PartialJobConfiguration partialJob) {
+  public PartialJob push(PartialJobConfiguration partialJob) {
     // LOGGER.info("JOBS: Pushing partial job: {}", partialJob.kind());
     return JobQueue.pushPartial(partialJob);
   }
 
   @Override
-  public CompletableFuture<PartialJob> repush(String id) {
+  public PartialJob repush(String id) {
     // LOGGER.info("JOBS: Re-Pushing partial job: {}", id);
     return JobQueue.repushPartial(id);
+  }
+
+  @Override
+  public CompletableFuture<Job> waitFor(String id) {
+    return JobQueue.waitFor(id);
+  }
+
+  @Override
+  public Optional<Job> get(String id) {
+    return JobQueue.get(id);
   }
 
   @Override
@@ -214,6 +235,17 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   @Override
   public void update(String partialJobId, int delta) {
     JobQueue.updatePartial(partialJobId, delta);
+  }
+
+  @Override
+  public void outputs(String id, Object outputs) {
+    try {
+      byte[] bytes = objectMapper.writeValueAsBytes(outputs);
+      Map<String, Object> outputsMap = objectMapper.readValue(bytes, Jobs.MAP_TYPE);
+      JobQueue.outputs(id, new SetOutputs(outputsMap));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

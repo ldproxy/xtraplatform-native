@@ -15,17 +15,18 @@ import de.ii.xtralink.jobs.PartialJob;
 import de.ii.xtralink.jobs.PartialJobConfiguration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public interface JobProcessing {
 
-  CompletableFuture<PartialJob> push(PartialJobConfiguration partialJob);
+  PartialJob push(PartialJobConfiguration partialJob);
 
-  CompletableFuture<PartialJob> repush(String id);
+  PartialJob repush(String id);
 
   void init(String jobId, int progressTotal, Map<String, ?> progressDetails);
 
   void update(String partialJobId, int delta);
+
+  void outputs(String id, Object outputs);
 
   <T extends JobInputs> T getInputs(Job job, Class<T> contextClass);
 
@@ -37,6 +38,10 @@ public interface JobProcessing {
 
   default JobResult failure(String message) {
     return new JobResult(Result.FAILURE, List.of(message));
+  }
+
+  default JobResult failure(List<String> messages) {
+    return new JobResult(Result.FAILURE, messages);
   }
 
   default JobResult retry(String message) {
