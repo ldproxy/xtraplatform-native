@@ -58,6 +58,12 @@ tasks.register('buildXtralink', Exec, {
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/clib/main')
     commandLine 'make', 'shared', 'OUT=../../../dist/'
+    doLast {
+        def distLib = new File(xtralinkLibDir, xtralinkLibName)
+        if (!distLib.exists()) {
+            throw new GradleException("Go build failed, xtralink library not found at ${distLib.absolutePath}.")
+        }
+    }
 })
 
 def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
