@@ -133,4 +133,8 @@ public interface Jobs {
   CompletableFuture<Job> waitFor(String id);
 
   Optional<Job> get(String id);
+
+  boolean cancel(String id);
+
+  boolean delete(String id);
 }

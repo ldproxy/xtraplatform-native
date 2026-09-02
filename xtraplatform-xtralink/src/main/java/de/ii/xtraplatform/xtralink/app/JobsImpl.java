@@ -225,6 +225,16 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   }
 
   @Override
+  public boolean cancel(String id) {
+    return JobQueue.cancel(id);
+  }
+
+  @Override
+  public boolean delete(String id) {
+    return false; // TODO JobQueue.delete(id);
+  }
+
+  @Override
   public void init(String jobId, int progressTotal, Map<String, ?> progressDetails) {
     InitProgress initProgress =
         new InitProgress(progressTotal, (Map<String, Object>) progressDetails);
