@@ -63,6 +63,7 @@ def buildXtralink = tasks.register('buildXtralink', Exec, {
     dependsOn(getXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/clib/main')
+    outputs.file new File(xtralinkLibDir, xtralinkLibName)
     commandLine 'make', 'shared', 'OUT=../../../dist/'
     doLast {
         def distLib = new File(xtralinkLibDir, xtralinkLibName)
@@ -89,9 +90,7 @@ def printXtralink= tasks.register('printXtralink', Exec, {
 
 def copyXtralinkLib = tasks.register('copyXtralinkLib', Copy, {
     dependsOn buildXtralink
-    from(xtralinkLibDir) {
-        include xtralinkLibName
-    }
+    from buildXtralink
     into embeddedLibDir
     finalizedBy printXtralink
 })
