@@ -75,7 +75,7 @@ def buildXtralink = tasks.register('buildXtralink', Exec, {
 })
 
 def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
-    dependsOn(getXtralink)
+    dependsOn(buildXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/java')
     commandLine './gradlew', 'build'
