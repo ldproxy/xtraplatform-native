@@ -53,6 +53,12 @@ def getXtralink = tasks.register('getXtralink', Copy, {
     }
 })
 
+def printXtralink0= tasks.register('printXtralink0', Exec, {
+    dependsOn(buildXtralink)
+    workingDir xtralinkLibDir
+    commandLine 'ls', '-lR'
+})
+
 def buildXtralink = tasks.register('buildXtralink', Exec, {
     dependsOn(getXtralink)
     inputs.dir xtralinkBuildDir
@@ -64,6 +70,7 @@ def buildXtralink = tasks.register('buildXtralink', Exec, {
             throw new GradleException("Go build failed, xtralink library not found at ${distLib.absolutePath}.")
         }
     }
+    finalizedBy printXtralink0
 })
 
 def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
