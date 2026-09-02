@@ -53,8 +53,8 @@ def getXtralink = tasks.register('getXtralink', Copy, {
     }
 })
 
-tasks.register('buildXtralink', Exec, {
-    dependsOn(tasks.getXtralink)
+def buildXtralink = tasks.register('buildXtralink', Exec, {
+    dependsOn(getXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/clib/main')
     commandLine 'make', 'shared', 'OUT=../../../dist/'
@@ -67,18 +67,26 @@ tasks.register('buildXtralink', Exec, {
 })
 
 def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
-    dependsOn(tasks.getXtralink)
+    dependsOn(getXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/java')
     commandLine './gradlew', 'build'
 })
 
+def printXtralink= tasks.register('printXtralink', Exec, {
+    dependsOn(copyXtralinkLib)
+    inputs.dir embeddedLibDir
+    workingDir embeddedLibDir
+    commandLine 'ls', '-lR'
+})
+
 def copyXtralinkLib = tasks.register('copyXtralinkLib', Copy, {
-    dependsOn tasks.buildXtralink
+    dependsOn buildXtralink
     from(xtralinkLibDir) {
         include xtralinkLibName
     }
     into embeddedLibDir
+    finalizedBy printXtralink
 })
 
 tasks.named('jar') {
