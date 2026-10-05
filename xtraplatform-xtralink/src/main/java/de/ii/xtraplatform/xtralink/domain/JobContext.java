@@ -8,6 +8,7 @@
 package de.ii.xtraplatform.xtralink.domain;
 
 import java.util.Map;
+import java.util.Objects;
 
 public interface JobContext {
 
@@ -18,11 +19,11 @@ public interface JobContext {
   // NOPMD - TODO: record fails docs generation
   class JobContextEntity implements JobContext {
     public static boolean is(Map<String, Object> context) {
-      return context.containsKey("entity");
+      return Objects.nonNull(context) && context.containsKey("entity");
     }
 
     public static String from(Map<String, Object> context) {
-      return (String) context.getOrDefault("entity", "");
+      return Objects.nonNull(context) ? (String) context.getOrDefault("entity", "") : "";
     }
 
     private final String entity;
