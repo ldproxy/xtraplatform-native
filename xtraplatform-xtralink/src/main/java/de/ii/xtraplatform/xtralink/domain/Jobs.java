@@ -62,7 +62,8 @@ public interface Jobs {
       String description,
       Object inputs,
       Object context,
-      Map<String, Object> progressDetails) {
+      Map<String, Object> progressDetails,
+      Optional<Integer> ttlSeconds) {
 
     try {
       byte[] inputsBytes = DEFAULT_MAPPER.writeValueAsBytes(inputs);
@@ -80,7 +81,8 @@ public interface Jobs {
           new JobProgress(0, 0, 0, progressDetails),
           true,
           true,
-          List.of());
+          List.of(),
+          ttlSeconds);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -97,7 +99,8 @@ public interface Jobs {
         job.progress(),
         job.setup(),
         job.cleanup(),
-        List.of(followUps));
+        List.of(followUps),
+        job.ttlSeconds());
   }
 
   static PartialJobConfiguration createPartial(
