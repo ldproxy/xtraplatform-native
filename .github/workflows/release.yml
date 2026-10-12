@@ -46,7 +46,6 @@ jobs:
       - if: ${{ matrix.os.type == 'macos' }}
         name: java
         run: |
-          ./gradlew --no-parallel --no-configuration-cache :xtraplatform-xtralink:buildXtralinkJava -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
           ./gradlew --no-parallel --no-configuration-cache publish -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
 
       - if: ${{ matrix.os.type == 'linux' }}
@@ -60,7 +59,6 @@ jobs:
       - if: ${{ matrix.os.type == 'linux' }}
         name: java sles
         run: |
-          docker exec sles ./gradlew --no-parallel --no-configuration-cache :xtraplatform-xtralink:buildXtralinkJava -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
           docker exec sles ./gradlew --no-parallel --no-configuration-cache assemble -Prelease=true -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
 
       - if: ${{ matrix.os.type == 'linux' }}
