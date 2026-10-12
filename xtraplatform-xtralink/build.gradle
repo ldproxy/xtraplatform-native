@@ -13,6 +13,7 @@ ext {
     cyclonedxGomodVersion = 'v1.12.0'
     xtralinkBuildDir = new File(buildDir, 'xtralink')
     xtralinkLibDir = new File(xtralinkBuildDir, 'dist')
+    xtralinkJavaJar = new File(xtralinkBuildDir, "ffi/java/build/libs/xtralink-${xtralinkVersion}.jar")
     xtralinkLibName = project.osdetector.os == 'osx' ? 'libxtralink.dylib' : 'libxtralink.so'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "xtralink-${xtralinkVersion}-${buildVersion}/lib")
@@ -21,7 +22,7 @@ ext {
 dependencies {
     provided project(':xtraplatform-nativ-loader')
 
-    embedded name: "xtralink-${xtralinkVersion}"
+    embedded files(xtralinkJavaJar) { builtBy 'buildXtralinkJava' }
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
@@ -79,6 +80,7 @@ def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
     dependsOn(buildXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/java')
+    outputs.file xtralinkJavaJar
     commandLine './gradlew', 'build'
 })
 

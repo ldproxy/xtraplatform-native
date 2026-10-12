@@ -22,6 +22,10 @@ jobs:
           - runner: macos-latest
             type: macos
             platform: darwin-arm64
+    env:
+      # linux libs are built on the target with the oldest glibc, see .github/scripts/setup-sles.sh
+      BUILD_IMAGE: registry.suse.com/suse/sle15:15.5
+      TARGET_IMAGES: almalinux:9 registry.suse.com/suse/sle15:15.5 ubuntu:jammy debian:bookworm
     steps:
       - uses: actions/checkout@v4
 
@@ -30,33 +34,42 @@ jobs:
           java-version: "25"
           distribution: "temurin"
           cache: gradle
-      - uses: actions/setup-go@v5
+      - if: ${{ matrix.os.type == 'macos' }}
+        uses: actions/setup-go@v5
         with:
           go-version: "1.26.5"
-      - uses: lukka/get-cmake@latest
+      - if: ${{ matrix.os.type == 'macos' }}
+        uses: lukka/get-cmake@latest
         with:
           cmakeVersion: 3.28.3
 
-      - if: ${{ matrix.os.platform != 'linux-amd64' }}
+      - if: ${{ matrix.os.type == 'macos' }}
         name: java
         run: |
-          ./gradlew --no-parallel --no-configuration-cache :xtraplatform-xtralink:buildXtralinkJava -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
           ./gradlew --no-parallel --no-configuration-cache publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
 
-      - if: ${{ matrix.os.platform == 'linux-amd64' }}
-        name: java rhel9
-        uses: kohlerdominik/docker-run-action@v2.0.0
-        with:
-          image: almalinux:9
-          workdir: /workspace
-          volumes: |
-            ${{ github.workspace }}:/workspace
-          environment: |
-            JAVA_HOME=/usr
-          run: |
-            dnf update -y
-            dnf install -y java-25-openjdk-devel g++ cmake go-toolset
-            pwd
-            ls -l
-            ./gradlew --no-parallel --no-configuration-cache :xtraplatform-xtralink:buildXtralinkJava -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
-            ./gradlew --no-parallel --no-configuration-cache publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+      - if: ${{ matrix.os.type == 'linux' }}
+        name: setup sles
+        run: |
+          docker run -d --name sles -v "$PWD:/workspace" -w /workspace \
+            -e JAVA_HOME=/opt/java -e PATH=/opt/go/bin:/opt/java/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            "$BUILD_IMAGE" sleep infinity
+          docker exec sles .github/scripts/setup-sles.sh
+
+      - if: ${{ matrix.os.type == 'linux' }}
+        name: java sles
+        run: |
+          docker exec sles ./gradlew --no-parallel --no-configuration-cache assemble -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
+
+      - if: ${{ matrix.os.type == 'linux' }}
+        name: check libs on all targets
+        run: |
+          for image in $TARGET_IMAGES; do
+            docker run --rm -v "$PWD:/workspace:ro" -v "$JAVA_HOME:/opt/java:ro" -e LD_BIND_NOW=1 -w /workspace "$image" \
+              /opt/java/bin/java .github/scripts/CheckLibs.java xtraplatform-*/build/generated/src/main/resources/*/
+          done
+
+      - if: ${{ matrix.os.type == 'linux' }}
+        name: publish sles
+        run: |
+          docker exec sles ./gradlew --no-parallel --no-configuration-cache publish -Pbranch=${{ github.ref_name }} -PdeployUser=${{ secrets.deploy_user }} -PdeployPassword=${{ secrets.deploy_password }}
