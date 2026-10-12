@@ -52,3 +52,8 @@ task copyZlibLib(dependsOn: buildZlib, type: Copy) {
 }
 
 tasks.processResources.dependsOn copyZlibLib
+
+sbom {
+    component name: 'zlib', version: zlibVersion, license: 'Zlib', url: downloadZlib.src,
+            purl: "pkg:github/madler/zlib@v${zlibVersion}", cpe: "cpe:2.3:a:zlib:zlib:${zlibVersion}:*:*:*:*:*:*:*"
+}

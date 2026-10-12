@@ -55,3 +55,13 @@ task copySQLiteLib(dependsOn: buildSQLite, type: Copy) {
 }
 
 tasks.processResources.dependsOn copySQLiteLib
+
+ext {
+    // sqlite-autoconf-XYYZZPP -> X.YY.ZZ
+    sqliteRelease = "${sqliteVersionLong[0]}.${sqliteVersionLong[1..2] as int}.${sqliteVersionLong[3..4] as int}"
+}
+
+sbom {
+    component name: 'sqlite', version: sqliteRelease, license: 'blessing', url: downloadSQLite.src,
+            purl: "pkg:generic/sqlite@${sqliteRelease}", cpe: "cpe:2.3:a:sqlite:sqlite:${sqliteRelease}:*:*:*:*:*:*:*"
+}

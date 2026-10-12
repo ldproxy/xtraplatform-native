@@ -70,3 +70,9 @@ task copyProjData(dependsOn: installProj, type: Copy) {
 }
 
 tasks.processResources.dependsOn copyProjLib, copyProjData
+
+// no CPE for PROJ in the NVD
+sbom {
+    component name: 'proj', version: projVersion, license: 'MIT', url: downloadProj.src, dependsOn: ['sqlite', 'libtiff'],
+            purl: "pkg:github/OSGeo/PROJ@${projVersion}"
+}
