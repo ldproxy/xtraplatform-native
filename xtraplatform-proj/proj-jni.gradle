@@ -1,7 +1,8 @@
 
 ext {
     projJniVersion = '1.0-SNAPSHOT'
-    projJniTagOrBranch = 'proj8-updates'
+    // branch proj8-updates as of 2024-12-04
+    projJniCommit = 'c04b2cfe05c09ee1ee58a33439d94cde6b9fddb2'
     projJniGithubOrg = 'interactive-instruments'
     geoApiVersion = '3.0.1'
     mavenVersion = '3.8.4'
@@ -34,8 +35,8 @@ task getMaven(dependsOn: downloadMaven, type: Copy) {
 }
 
 task downloadProjJni(type: Download) {
-    src "https://github.com/${projJniGithubOrg}/PROJ-JNI/archive/refs/heads/${projJniTagOrBranch}.zip"
-    dest new File(new File(System.getProperty("java.io.tmpdir")), "proj-jni.zip")
+    src "https://github.com/${projJniGithubOrg}/PROJ-JNI/archive/${projJniCommit}.zip"
+    dest new File(new File(System.getProperty("java.io.tmpdir")), "proj-jni-${projJniCommit}.zip")
     overwrite false
 }
 
@@ -74,3 +75,9 @@ tasks.register('installProjJni', Exec) {
 tasks.compileJava.dependsOn tasks.named('installProjJni')
 //tasks.installProjJni.finalizedBy {tasks.named('embedResources')}
 //tasks.getProjJni.finalizedBy {tasks.named('embedResources')}
+
+// embedded as file, not detected by the CycloneDX plugin
+sbom {
+    component name: 'PROJ-JNI', version: projJniCommit, license: 'MIT', url: downloadProjJni.src, dependsOn: ['proj'],
+            purl: "pkg:github/${projJniGithubOrg}/PROJ-JNI@${projJniCommit}"
+}

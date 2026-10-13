@@ -10,8 +10,10 @@ description = 'xtralink integration, jobs and store.'
 ext {
     xtralinkVersion = '0.9.5'
     buildVersion = '0'
+    cyclonedxGomodVersion = 'v1.12.0'
     xtralinkBuildDir = new File(buildDir, 'xtralink')
     xtralinkLibDir = new File(xtralinkBuildDir, 'dist')
+    xtralinkJavaJar = new File(xtralinkBuildDir, "ffi/java/build/libs/xtralink-${xtralinkVersion}.jar")
     xtralinkLibName = project.osdetector.os == 'osx' ? 'libxtralink.dylib' : 'libxtralink.so'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "xtralink-${xtralinkVersion}-${buildVersion}/lib")
@@ -20,7 +22,7 @@ ext {
 dependencies {
     provided project(':xtraplatform-nativ-loader')
 
-    embedded name: "xtralink-${xtralinkVersion}"
+    embedded files(xtralinkJavaJar) { builtBy 'buildXtralinkJava' }
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
@@ -78,8 +80,26 @@ def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
     dependsOn(buildXtralink)
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/java')
+    outputs.file xtralinkJavaJar
     commandLine './gradlew', 'build'
 })
+
+// reads the Go modules and the Go version from the build info of the library
+def xtralinkSbom = tasks.register('xtralinkSbom', Exec, {
+    def library = new File(xtralinkLibDir, xtralinkLibName)
+    def output = new File(buildDir, 'sbom/xtralink.cdx.json')
+    dependsOn(buildXtralink)
+    inputs.file library
+    outputs.file output
+    workingDir buildDir
+    commandLine 'go', 'run', "github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@${cyclonedxGomodVersion}", 'bin',
+            '-json', '-licenses', '-assert-licenses', '-std', '-noserial', '-notimestamp', '-output-version', '1.6',
+            '-version', "v${xtralinkVersion}", '-output', output, library
+})
+
+sbom {
+    fragment xtralinkSbom
+}
 
 def printXtralink= tasks.register('printXtralink', Exec, {
     dependsOn(copyXtralinkLib)

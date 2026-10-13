@@ -55,3 +55,8 @@ task copyTiffLib(dependsOn: buildTiff, type: Copy) {
 }
 
 tasks.processResources.dependsOn copyTiffLib
+
+sbom {
+    component name: 'libtiff', version: tiffVersion, license: 'libtiff', url: downloadTiff.src, dependsOn: ['zlib'],
+            purl: "pkg:generic/libtiff@${tiffVersion}", cpe: "cpe:2.3:a:libtiff:libtiff:${tiffVersion}:*:*:*:*:*:*:*"
+}
