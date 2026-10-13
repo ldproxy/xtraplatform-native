@@ -66,3 +66,9 @@ task copyGeosLib(dependsOn: buildGeos, type: Copy) {
 }
 
 tasks.processResources.dependsOn copyGeosLib
+
+// no CPE for GEOS in the NVD
+sbom {
+    component name: 'geos', version: geosVersion, license: 'LGPL-2.1-only', url: downloadGeos.src,
+            purl: "pkg:github/libgeos/geos@${geosVersion}"
+}

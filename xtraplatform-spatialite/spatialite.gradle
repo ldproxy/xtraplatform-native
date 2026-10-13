@@ -86,3 +86,9 @@ task copySpatialiteLib(dependsOn: buildSpatialite, type: Copy) {
 }
 
 tasks.processResources.dependsOn copySpatialiteLib
+
+// no CPE for libspatialite in the NVD
+sbom {
+    component name: 'libspatialite', version: spatialiteVersion, license: 'MPL-1.1 OR GPL-2.0-or-later OR LGPL-2.1-or-later',
+            url: downloadSpatialite.src, dependsOn: ['geos', 'sqlite', 'zlib'], purl: "pkg:generic/libspatialite@${spatialiteVersion}"
+}
