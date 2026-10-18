@@ -17,8 +17,6 @@ esac
 zypper ar -f https://packages.adoptium.net/artifactory/rpm/opensuse/$(. /etc/os-release; echo $VERSION_ID)/$(uname -m) adoptium
 zypper -n --gpg-auto-import-keys install --no-recommends gcc-c++ make cmake curl tar gzip git which findutils gawk sed grep diffutils patch file m4 temurin-$JAVA_VERSION-jdk
 
-#mkdir -p /opt/java
-#curl -fsSL "https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/linux/${JAVA_ARCH}/jdk/hotspot/normal/eclipse" | tar -xz -C /opt/java --strip-components=1
 curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" | tar -xz -C /opt
 
 ldd --version | head -1
