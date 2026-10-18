@@ -77,6 +77,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private final ObjectMapper objectMapper;
   private final Map<String, Status> jobStatus;
   private final Map<String, JobProgress> jobProgress;
+  private final Map<String, Boolean> jobCancelled;
   private final Map<String, JobListener.Registration> jobRegistration;
   private final ScheduledExecutorService polling;
 
@@ -89,6 +90,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         jackson.getDefaultObjectMapper().registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
     this.jobStatus = new ConcurrentHashMap<>();
     this.jobProgress = new ConcurrentHashMap<>();
+    this.jobCancelled = new ConcurrentHashMap<>();
     this.jobRegistration = new ConcurrentHashMap<>();
     this.polling =
         MoreExecutors.getExitingScheduledExecutorService(
@@ -183,6 +185,9 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
             jobStatus.put(j.id(), j.status());
             jobProgress.put(j.id(), j.progress());
           } else {
+            if (j.status() == Status.DISMISSED) {
+              jobCancelled.put(j.id(), true);
+            }
             jobStatus.remove(j.id());
             jobProgress.remove(j.id());
             JobListener.Registration removed = jobRegistration.remove(j.id());
@@ -282,6 +287,15 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public boolean isCancelled(String jobId) {
+    if (jobCancelled.getOrDefault(jobId, false)) {
+      jobCancelled.remove(jobId);
+      return true;
+    }
+    return false;
   }
 
   private void register(JobProcessorBase processor) {
