@@ -19,9 +19,9 @@ zypper -n --gpg-auto-import-keys install --no-recommends gcc-c++ make cmake curl
 
 curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" | tar -xz -C /opt
 
-ldd --version | head -1
-gcc --version | head -1
-cmake --version | head -1
+(ldd --version | head -n 1) || true
+(gcc --version | head -n 1) || true
+(cmake --version | head -n 1) || true
 java -version
 go version
 
