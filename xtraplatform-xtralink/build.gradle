@@ -8,7 +8,7 @@ description = 'xtralink integration, jobs and store.'
 //docIgnore = true
 
 ext {
-    xtralinkVersion = '0.9.5'
+    xtralinkVersion = '0.9.7'
     buildVersion = '0'
     cyclonedxGomodVersion = 'v1.12.0'
     xtralinkBuildDir = new File(buildDir, 'xtralink')
@@ -21,6 +21,7 @@ ext {
 
 dependencies {
     provided project(':xtraplatform-nativ-loader')
+    provided 'de.interactive_instruments:xtraplatform-blobs'
 
     embedded files(xtralinkJavaJar) { builtBy 'buildXtralinkJava' }
 }

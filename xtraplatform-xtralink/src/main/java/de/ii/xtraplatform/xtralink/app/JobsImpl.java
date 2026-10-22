@@ -236,7 +236,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   @Override
   public boolean delete(String id) {
-    return false; // TODO JobQueue.delete(id);
+    return JobQueue.delete(id);
   }
 
   @Override
