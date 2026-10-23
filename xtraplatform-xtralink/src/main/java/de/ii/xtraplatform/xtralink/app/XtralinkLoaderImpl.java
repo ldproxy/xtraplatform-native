@@ -20,7 +20,7 @@ public class XtralinkLoaderImpl implements NativeLoader {
 
   @Override
   public String getName() {
-    return "xtralink-0.9.5-0";
+    return NativeName.VALUE;
   }
 
   @Override

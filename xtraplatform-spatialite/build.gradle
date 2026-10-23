@@ -8,15 +8,18 @@ description = 'SpatiaLite integration.'
 docIgnore = true
 
 ext {
-    //TODO: when changed, adjust SpatiaLiteLoaderImpl.getName (can we inject it?)
     spatialiteVersion = '5.1.0'
     buildVersion = '0'
+    nativeName = "spatialite-${spatialiteVersion}-${buildVersion}"
+    nativeNamePackage = 'de.ii.xtraplatform.spatialite.domain'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "spatialite-${spatialiteVersion}-${buildVersion}/lib")
     embeddedDataDir = new File(generatedResourcesDir, "spatialite-${spatialiteVersion}-${buildVersion}/data")
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
+
+apply from: rootProject.file('gradle/native-name.gradle')
 
 apply from: 'zlib.gradle'
 apply from: 'sqlite.gradle'

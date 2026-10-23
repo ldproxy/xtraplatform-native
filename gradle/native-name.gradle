@@ -1,0 +1,26 @@
+// Generates a NativeName class holding the versioned name of the embedded native bundle,
+// so the loader's getName() cannot drift from the version declared in build.gradle.
+// Expects ext.nativeName and ext.nativeNamePackage to be set before applying.
+
+def generateNativeName = tasks.register('generateNativeName') {
+    def name = nativeName
+    def packageName = nativeNamePackage
+    def outDir = layout.buildDirectory.dir('generated/sources/nativeName/java/main')
+    inputs.property 'name', name
+    inputs.property 'packageName', packageName
+    outputs.dir outDir
+    doLast {
+        def file = outDir.get().file("${packageName.replace('.', '/')}/NativeName.java").asFile
+        file.parentFile.mkdirs()
+        file.text = """package ${packageName};
+
+final class NativeName {
+  static final String VALUE = "${name}";
+
+  private NativeName() {}
+}
+"""
+    }
+}
+
+sourceSets.main.java.srcDir(generateNativeName)
