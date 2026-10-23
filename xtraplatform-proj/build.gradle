@@ -8,15 +8,18 @@ description = 'PROJ integration and Java API.'
 docIgnore = true
 
 ext {
-    //TODO: when changed, adjust ProjLoaderImpl.getName (can we inject it?)
     projVersion = '9.3.1'
     buildVersion = '0'
+    nativeName = "proj-${projVersion}-${buildVersion}"
+    nativeNamePackage = 'de.ii.xtraplatform.proj.domain'
     generatedResourcesDir = new File(buildDir, 'generated/src/main/resources/')
     embeddedLibDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/lib")
     embeddedDataDir = new File(generatedResourcesDir, "proj-${projVersion}-${buildVersion}/data")
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
+
+apply from: rootProject.file('gradle/native-name.gradle')
 
 apply from: 'sqlite.gradle'
 apply from: 'zlib.gradle'

@@ -52,7 +52,7 @@ jobs:
         name: setup sles
         run: |
           docker run -d --name sles -v "$PWD:/workspace" -w /workspace \
-            -e JAVA_HOME=/opt/java -e PATH=/opt/go/bin:/opt/java/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -e JAVA_HOME=/usr/lib64/jvm/java-25-temurin-jdk -e PATH=/opt/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
             "$BUILD_IMAGE" sleep infinity
           docker exec sles .github/scripts/setup-sles.sh
 

@@ -32,6 +32,8 @@ public interface JobProcessing {
 
   <T extends JobContext> T getContext(BaseJob job, Class<T> contextClass);
 
+  boolean isCancelled(String jobId);
+
   default JobResult success() {
     return new JobResult(Result.SUCCESS, List.of());
   }

@@ -8,8 +8,10 @@ description = 'xtralink integration, jobs and store.'
 //docIgnore = true
 
 ext {
-    xtralinkVersion = '0.9.5'
+    xtralinkVersion = '0.9.8'
     buildVersion = '0'
+    nativeName = "xtralink-${xtralinkVersion}-${buildVersion}"
+    nativeNamePackage = 'de.ii.xtraplatform.xtralink.app'
     cyclonedxGomodVersion = 'v1.12.0'
     xtralinkBuildDir = new File(buildDir, 'xtralink')
     xtralinkLibDir = new File(xtralinkBuildDir, 'dist')
@@ -21,11 +23,14 @@ ext {
 
 dependencies {
     provided project(':xtraplatform-nativ-loader')
+    provided 'de.interactive_instruments:xtraplatform-blobs'
 
     embedded files(xtralinkJavaJar) { builtBy 'buildXtralinkJava' }
 }
 
 project.sourceSets.main.output.dir(generatedResourcesDir)
+
+apply from: rootProject.file('gradle/native-name.gradle')
 
 def downloadXtralink = tasks.register('downloadXtralink', Download, {
     src "https://github.com/ldproxy/xtralink/archive/refs/tags/v${xtralinkVersion}.tar.gz"
@@ -81,7 +86,7 @@ def buildXtralinkJava= tasks.register('buildXtralinkJava', Exec, {
     inputs.dir xtralinkBuildDir
     workingDir new File(xtralinkBuildDir, 'ffi/java')
     outputs.file xtralinkJavaJar
-    commandLine './gradlew', 'build'
+    commandLine './gradlew', 'build', "-PxtralinkVersion=${xtralinkVersion}"
 })
 
 // reads the Go modules and the Go version from the build info of the library
@@ -129,6 +134,9 @@ project.subprojects { Project subproject ->
     if (subproject.name.endsWith("-tpl")) {
         subproject.afterEvaluate {
             subproject.tasks.named("compileJava") {
+                dependsOn buildXtralinkJava
+            }
+            subproject.tasks.named("moduleInfo") {
                 dependsOn buildXtralinkJava
             }
             subproject.tasks.named("cyclonedxDirectBom") {
