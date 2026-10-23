@@ -1,5 +1,6 @@
 
 ext {
+    // renovate: datasource=github-releases depName=madler/zlib
     zlibVersion = '1.3.2'
 }
 
