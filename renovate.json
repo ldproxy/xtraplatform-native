@@ -12,13 +12,14 @@
     "**/Dockerfile",
     ".woodpecker/**/*.yml",
     "xtraplatform-proj/*.gradle",
-    "xtraplatform-spatialite/*.gradle"
+    "xtraplatform-spatialite/*.gradle",
+    "xtraplatform-xtralink/*.gradle"
   ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "native libraries downloaded in the Gradle build, marked with a renovate comment",
-      "managerFilePatterns": ["/^xtraplatform-(proj|spatialite)/[^/]+\\.gradle$/"],
+      "managerFilePatterns": ["/^xtraplatform-(proj|spatialite|xtralink)/[^/]+\\.gradle$/"],
       "matchStrings": [
         "// renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\w+ = '(?<currentValue>[^']+)'"
       ]
@@ -36,7 +37,7 @@
   },
   "packageRules": [
     {
-      "matchPackageNames": ["madler/zlib", "libtiff/libtiff"],
+      "matchPackageNames": ["madler/zlib", "libtiff/libtiff", "ldproxy/xtralink"],
       "extractVersion": "^v(?<version>.+)$"
     },
     {

@@ -8,6 +8,7 @@ description = 'xtralink integration, jobs and store.'
 //docIgnore = true
 
 ext {
+    // renovate: datasource=github-tags depName=ldproxy/xtralink
     xtralinkVersion = '0.9.8'
     buildVersion = '0'
     nativeName = "xtralink-${xtralinkVersion}-${buildVersion}"
