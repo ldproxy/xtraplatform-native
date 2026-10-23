@@ -8,6 +8,7 @@ description = 'SpatiaLite integration.'
 docIgnore = true
 
 ext {
+    // renovate: datasource=custom.libspatialite depName=libspatialite
     spatialiteVersion = '5.1.0'
     buildVersion = '0'
     nativeName = "spatialite-${spatialiteVersion}-${buildVersion}"
