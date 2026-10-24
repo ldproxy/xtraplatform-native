@@ -20,8 +20,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class JobProcessorSimple<T extends JobInputs>
     implements JobProcessor<T, JobContextEntity> {
@@ -31,16 +31,39 @@ public abstract class JobProcessorSimple<T extends JobInputs>
     EXECUTE,
     CLEANUP,
     FINALIZE;
+
+    public String getPartialKind(String kind) {
+      return kind + getSuffix();
+    }
+
+    public String getSuffix() {
+      return ":" + name().toLowerCase(Locale.ROOT);
+    }
+
+    public static Phase fromPartialKind(String partialKind) {
+      if (partialKind.endsWith(SETUP.getSuffix())) {
+        return SETUP;
+      } else if (partialKind.endsWith(EXECUTE.getSuffix())) {
+        return EXECUTE;
+      } else if (partialKind.endsWith(CLEANUP.getSuffix())) {
+        return CLEANUP;
+      } else if (partialKind.endsWith(FINALIZE.getSuffix())) {
+        return FINALIZE;
+      }
+      throw new IllegalArgumentException("Unknown phase for kind: " + partialKind);
+    }
   }
+
+  // Markers mirror the output paths under a per-job folder, so finalize finds the files of a job
+  // on any instance and after restarts, and parallel partial jobs never write the same marker.
+  private static final Path OUTPUT_MARKERS = Path.of(".outputs");
 
   private final String kind;
   private final ResourceStore jobStore;
-  private final List<Path> outputFiles;
 
   protected JobProcessorSimple(String kind, ResourceStore resourceStore) {
     this.kind = kind;
     this.jobStore = resourceStore.with(Jobs.RESOURCE_TYPE, kind);
-    this.outputFiles = new CopyOnWriteArrayList<>();
   }
 
   /**
@@ -60,12 +83,13 @@ public abstract class JobProcessorSimple<T extends JobInputs>
    * is deleted from the queue. This method should be used to store any output files generated
    * during the execution of the job
    *
+   * @param job the job the output file belongs to
    * @param path the path of the output file
    * @param content the content of the output file as an InputStream
    * @throws IOException if an I/O error occurs while saving the file
    */
-  protected final void saveOutputFile(Path path, InputStream content) throws IOException {
-    outputFiles.add(path);
+  protected final void saveOutputFile(Job job, Path path, InputStream content) throws IOException {
+    jobStore.put(outputMarkers(job).resolve(path), InputStream.nullInputStream());
     jobStore.put(path, content);
   }
 
@@ -116,16 +140,30 @@ public abstract class JobProcessorSimple<T extends JobInputs>
    * @param jobs
    * @return
    */
-  private JobResult finalize(PartialJob partialJob, Job job, T inputs, JobProcessing jobs) {
+  private final JobResult finalize(PartialJob partialJob, Job job, T inputs, JobProcessing jobs) {
+    Path markers = outputMarkers(job);
+    List<Path> outputFiles;
+    try (Stream<Path> entries =
+        jobStore.walk(markers, Integer.MAX_VALUE, (path, attributes) -> attributes.isValue())) {
+      outputFiles = entries.filter(path -> !path.toString().isEmpty()).toList();
+    } catch (IOException e) {
+      return jobs.failure("Error listing output files for job " + job.id() + ": " + e.getMessage());
+    }
+
     for (Path path : outputFiles) {
       try {
         jobStore.delete(path);
+        jobStore.delete(markers.resolve(path));
       } catch (IOException e) {
         return jobs.failure(
             "Error deleting output file " + path + " for job " + job.id() + ": " + e.getMessage());
       }
     }
     return jobs.success();
+  }
+
+  private static Path outputMarkers(Job job) {
+    return OUTPUT_MARKERS.resolve(job.id());
   }
 
   @Override
@@ -142,7 +180,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
   public final JobResult process(PartialJob partialJob, Job job, JobProcessing jobs)
       throws Exception {
     T inputs = getInputs(job, jobs);
-    Phase phase = getPhase(partialJob);
+    Phase phase = Phase.fromPartialKind(partialJob.kind());
 
     try {
       return switch (phase) {
@@ -179,20 +217,6 @@ public abstract class JobProcessorSimple<T extends JobInputs>
   }
 
   private String partialKind(Phase phase) {
-    return String.join(":", kind, String.join(":", phase.name().toLowerCase(Locale.ROOT)));
-  }
-
-  private Phase getPhase(PartialJob partialJob) {
-    String kind = partialJob.kind();
-    if (kind.endsWith(":" + Phase.SETUP.name().toLowerCase(Locale.ROOT))) {
-      return Phase.SETUP;
-    } else if (kind.endsWith(":" + Phase.EXECUTE.name().toLowerCase(Locale.ROOT))) {
-      return Phase.EXECUTE;
-    } else if (kind.endsWith(":" + Phase.CLEANUP.name().toLowerCase(Locale.ROOT))) {
-      return Phase.CLEANUP;
-    } else if (kind.endsWith(":" + Phase.FINALIZE.name().toLowerCase(Locale.ROOT))) {
-      return Phase.FINALIZE;
-    }
-    throw new IllegalArgumentException("Unknown phase for kind: " + kind);
+    return phase.getPartialKind(kind);
   }
 }

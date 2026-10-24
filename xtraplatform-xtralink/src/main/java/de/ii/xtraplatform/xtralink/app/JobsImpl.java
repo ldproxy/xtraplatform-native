@@ -27,6 +27,7 @@ import de.ii.xtralink.jobs.PartialJob;
 import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtralink.jobs.QueueConfiguration;
 import de.ii.xtralink.jobs.SetOutputs;
+import de.ii.xtralink.jobs.internal.CancelListener;
 import de.ii.xtralink.jobs.internal.JobListener;
 import de.ii.xtralink.jobs.internal.JobProcessor.Registration;
 import de.ii.xtralink.jobs.internal.JobQueue;
@@ -77,9 +78,10 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private final ObjectMapper objectMapper;
   private final Map<String, Status> jobStatus;
   private final Map<String, JobProgress> jobProgress;
-  private final Map<String, Boolean> jobCancelled;
   private final Map<String, JobListener.Registration> jobRegistration;
+  private final Map<String, ActiveJob> activeJobs;
   private final ScheduledExecutorService polling;
+  private CancelListener.Registration cancelRegistration;
 
   @Inject
   JobsImpl(AppContext appContext, Jackson jackson, Lazy<Set<JobProcessorBase>> processors) {
@@ -90,8 +92,8 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         jackson.getDefaultObjectMapper().registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
     this.jobStatus = new ConcurrentHashMap<>();
     this.jobProgress = new ConcurrentHashMap<>();
-    this.jobCancelled = new ConcurrentHashMap<>();
     this.jobRegistration = new ConcurrentHashMap<>();
+    this.activeJobs = new ConcurrentHashMap<>();
     this.polling =
         MoreExecutors.getExitingScheduledExecutorService(
             (ScheduledThreadPoolExecutor)
@@ -107,6 +109,9 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     if (Objects.nonNull(procs)) {
       procs.forEach(this::register);
     }
+
+    this.cancelRegistration = CancelListener.register(this::onCancel);
+    JobQueue.onCancel(cancelRegistration);
 
     QueueConfiguration queueConfiguration =
         new QueueConfiguration(
@@ -129,43 +134,11 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   public void onStop() {
     registrations.forEach(Registration::close);
 
-    JobQueue.stop();
-  }
-
-  @SuppressWarnings({"PMD.GuardLogStatement"})
-  private void logActiveJobSetProgress() {
-    if (logJobsDebug()) {
-      jobProgress.forEach(
-          (jobSetId, progress) -> {
-            Optional<Job> jobSet = JobQueue.get(jobSetId);
-            if (jobSet.isEmpty()) {
-              return;
-            }
-
-            setupExecutionContext(jobSet.get());
-
-            if (logJobsDebug()) {
-              LOGGER.debug(
-                  MARKER.JOBS,
-                  "{} at {}%{}",
-                  jobSet.get().label(),
-                  jobSet.get().progress().percent(),
-                  jobSet.get().description());
-            }
-          });
+    if (Objects.nonNull(cancelRegistration)) {
+      cancelRegistration.close();
     }
-    /*if (logJobsTrace()) {
-      LOGGER.trace(
-          MARKER.JOBS, "Job processor threads busy: {}/{}", activeThreads.get(), maxThreads);
-    }*/
-  }
 
-  private static boolean logJobsTrace() {
-    return LOGGER.isDebugEnabled(MARKER.JOBS) || LOGGER.isTraceEnabled();
-  }
-
-  private static boolean logJobsDebug() {
-    return LOGGER.isDebugEnabled(MARKER.JOBS) || LOGGER.isDebugEnabled();
+    JobQueue.stop();
   }
 
   @Override
@@ -174,26 +147,13 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
     JobListener onProgress2 =
         (j) -> {
-          if (j.status() == Status.RUNNING
-              && jobStatus.containsKey(j.id())
-              && jobStatus.get(j.id()) == Status.ACCEPTED) {
-            if (LOGGER.isInfoEnabled() || LOGGER.isInfoEnabled(MARKER.JOBS)) {
-              LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
-            }
-          }
-          if (j.status() == Status.ACCEPTED || j.status() == Status.RUNNING) {
+          logJobStatus(j);
+
+          if (isActive(j)) {
             jobStatus.put(j.id(), j.status());
             jobProgress.put(j.id(), j.progress());
           } else {
-            if (j.status() == Status.DISMISSED) {
-              jobCancelled.put(j.id(), true);
-            }
-            jobStatus.remove(j.id());
-            jobProgress.remove(j.id());
-            JobListener.Registration removed = jobRegistration.remove(j.id());
-            if (removed != null) {
-              removed.close();
-            }
+            cleanupProgress(j);
           }
 
           onChange.onProgress(j);
@@ -227,6 +187,21 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   @Override
   public Optional<Job> get(String id) {
     return JobQueue.get(id);
+  }
+
+  @Override
+  public List<Job> list() {
+    return JobQueue.list().jobs();
+  }
+
+  @Override
+  public List<PartialJob> taken() {
+    return JobQueue.taken().partialJobs();
+  }
+
+  @Override
+  public List<PartialJob> failed() {
+    return JobQueue.failed().partialJobs();
   }
 
   @Override
@@ -291,11 +266,44 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   @Override
   public boolean isCancelled(String jobId) {
-    if (jobCancelled.getOrDefault(jobId, false)) {
-      jobCancelled.remove(jobId);
-      return true;
-    }
-    return false;
+    ActiveJob activeJob = activeJobs.get(jobId);
+    return Objects.nonNull(activeJob) && activeJob.cancelled;
+  }
+
+  // Only jobs with partial jobs running here can be cancelled early, others are ignored, so the
+  // map stays bounded by what is in flight.
+  private void onCancel(String jobId) {
+    activeJobs.computeIfPresent(
+        jobId,
+        (id, activeJob) -> {
+          activeJob.cancelled = true;
+          return activeJob;
+        });
+  }
+
+  // onCancel ignores jobs without an entry, so a cancel just before this partial job started is
+  // only visible in the status of the job.
+  private void beginPartialJob(Job job) {
+    activeJobs.compute(
+        job.id(),
+        (id, activeJob) -> {
+          ActiveJob current = Objects.requireNonNullElseGet(activeJob, ActiveJob::new);
+          current.partialJobs++;
+          if (job.status() == Status.DISMISSED) {
+            current.cancelled = true;
+          }
+          return current;
+        });
+  }
+
+  private void endPartialJob(Job job) {
+    activeJobs.computeIfPresent(
+        job.id(), (id, activeJob) -> --activeJob.partialJobs == 0 ? null : activeJob);
+  }
+
+  private static final class ActiveJob {
+    private int partialJobs;
+    private volatile boolean cancelled;
   }
 
   private void register(JobProcessorBase processor) {
@@ -304,7 +312,13 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
           Instant start = Instant.now();
           setupExecutionContext(job);
           logJobProcessingStart(partialJob);
-          JobResult result = processor.process(partialJob, job, this);
+          beginPartialJob(job);
+          JobResult result;
+          try {
+            result = processor.process(partialJob, job, this);
+          } finally {
+            endPartialJob(job);
+          }
           logJobProcessingEnd(result, start);
 
           return result;
@@ -325,10 +339,76 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     }
   }
 
+  private void cleanupProgress(Job job) {
+    jobStatus.remove(job.id());
+    jobProgress.remove(job.id());
+    JobListener.Registration removed = jobRegistration.remove(job.id());
+    if (removed != null) {
+      removed.close();
+    }
+  }
+
   private void setupExecutionContext(Job job) {
     if (JobContextEntity.is(job.context())) {
       LogContext.put(LogContext.CONTEXT.SERVICE, JobContextEntity.from(job.context()));
     }
+  }
+
+  private void logJobStatus(Job j) {
+    if (LOGGER.isInfoEnabled() || LOGGER.isInfoEnabled(MARKER.JOBS)) {
+      setupExecutionContext(j);
+
+      if (j.status() == Status.RUNNING
+          && jobStatus.containsKey(j.id())
+          && jobStatus.get(j.id()) == Status.ACCEPTED) {
+        LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
+
+      } else if (j.status() == Status.SUCCESSFUL
+          && jobStatus.containsKey(j.id())
+          && jobStatus.get(j.id()) != Status.SUCCESSFUL) {
+        LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
+      } else if (j.status() == Status.FAILED
+          && jobStatus.containsKey(j.id())
+          && jobStatus.get(j.id()) != Status.FAILED) {
+        LOGGER.info(MARKER.JOBS, "{} failed{}", j.label(), j.description());
+      } else if (j.status() == Status.DISMISSED
+          && jobStatus.containsKey(j.id())
+          && jobStatus.get(j.id()) != Status.DISMISSED) {
+        LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
+      }
+    }
+  }
+
+  @SuppressWarnings({"PMD.GuardLogStatement"})
+  private void logActiveJobSetProgress() {
+    if (logJobsDebug()) {
+      jobProgress.forEach(
+          (jobSetId, progress) -> {
+            Optional<Job> jobSet = JobQueue.get(jobSetId);
+            if (jobSet.isEmpty() || !isActive(jobSet.get())) {
+              return;
+            }
+
+            setupExecutionContext(jobSet.get());
+
+            if (logJobsDebug()) {
+              LOGGER.debug(
+                  MARKER.JOBS,
+                  "{} at {}%{}",
+                  jobSet.get().label(),
+                  jobSet.get().progress().percent(),
+                  jobSet.get().description());
+            }
+          });
+    }
+    /*if (logJobsTrace()) {
+      LOGGER.trace(
+          MARKER.JOBS, "Job processor threads busy: {}/{}", activeThreads.get(), maxThreads);
+    }*/
+  }
+
+  private static boolean isActive(Job job) {
+    return job.status() == Status.ACCEPTED || job.status() == Status.RUNNING;
   }
 
   private void logJobProcessingStart(PartialJob job) {
@@ -347,6 +427,14 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         LOGGER.trace(MARKER.JOBS, "Processed job in {}: {}", pretty(duration), result);
       }
     }
+  }
+
+  private static boolean logJobsTrace() {
+    return LOGGER.isDebugEnabled(MARKER.JOBS) || LOGGER.isTraceEnabled();
+  }
+
+  private static boolean logJobsDebug() {
+    return LOGGER.isDebugEnabled(MARKER.JOBS) || LOGGER.isDebugEnabled();
   }
 
   private static String pretty(long milliseconds) {

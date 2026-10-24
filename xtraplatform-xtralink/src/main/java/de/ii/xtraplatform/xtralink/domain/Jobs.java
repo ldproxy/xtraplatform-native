@@ -21,6 +21,7 @@ import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobConfiguration;
 import de.ii.xtralink.jobs.JobProgress;
+import de.ii.xtralink.jobs.PartialJob;
 import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtralink.jobs.ProgressUpdate;
 import de.ii.xtralink.jobs.internal.JobListener;
@@ -136,6 +137,12 @@ public interface Jobs {
   CompletableFuture<Job> waitFor(String id);
 
   Optional<Job> get(String id);
+
+  List<Job> list();
+
+  List<PartialJob> taken();
+
+  List<PartialJob> failed();
 
   boolean cancel(String id);
 
