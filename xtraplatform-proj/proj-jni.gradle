@@ -1,8 +1,8 @@
 
 ext {
     projJniVersion = '1.0-SNAPSHOT'
-    // branch proj8-updates as of 2024-12-04
-    projJniCommit = 'c04b2cfe05c09ee1ee58a33439d94cde6b9fddb2'
+    // branch proj8-updates as of 2026-10-26
+    projJniCommit = '1fedc9f37901c7ce5dbd460e6a252ba4abc498c8'
     projJniGithubOrg = 'interactive-instruments'
     geoApiVersion = '3.0.1'
     mavenVersion = '3.8.4'

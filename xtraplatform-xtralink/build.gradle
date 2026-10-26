@@ -9,7 +9,7 @@ description = 'xtralink integration, jobs and store.'
 
 ext {
     // renovate: datasource=github-tags depName=ldproxy/xtralink
-    xtralinkVersion = '0.9.8'
+    xtralinkVersion = '0.9.12'
     buildVersion = '0'
     nativeName = "xtralink-${xtralinkVersion}-${buildVersion}"
     nativeNamePackage = 'de.ii.xtraplatform.xtralink.app'
@@ -25,6 +25,8 @@ ext {
 dependencies {
     provided project(':xtraplatform-nativ-loader')
     provided 'de.interactive_instruments:xtraplatform-blobs'
+    provided 'de.interactive_instruments:xtraplatform-ops'
+    provided 'de.interactive_instruments:xtraplatform-openapi'
 
     embedded files(xtralinkJavaJar) { builtBy 'buildXtralinkJava' }
 }

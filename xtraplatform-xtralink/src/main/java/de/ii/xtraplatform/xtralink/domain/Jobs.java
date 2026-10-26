@@ -18,18 +18,22 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import de.ii.xtralink.jobs.Identifiers.Status;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobConfiguration;
 import de.ii.xtralink.jobs.JobProgress;
+import de.ii.xtralink.jobs.PartialJob;
 import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtralink.jobs.ProgressUpdate;
 import de.ii.xtralink.jobs.internal.JobListener;
 import de.ii.xtraplatform.base.domain.JacksonProvider.IntervalMixin;
+import de.ii.xtraplatform.xtralink.domain.JobContext.JobContextEntity;
 import io.dropwizard.jackson.CaffeineModule;
 import io.dropwizard.jackson.FuzzyEnumModule;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.threeten.extra.Interval;
@@ -136,6 +140,21 @@ public interface Jobs {
   CompletableFuture<Job> waitFor(String id);
 
   Optional<Job> get(String id);
+
+  List<Job> list();
+
+  List<PartialJob> taken();
+
+  List<PartialJob> failed();
+
+  default boolean isInProgress(String kind, String entity) {
+    return list().stream()
+        .anyMatch(
+            job ->
+                Objects.equals(job.kind(), kind)
+                    && (job.status() == Status.ACCEPTED || job.status() == Status.RUNNING)
+                    && Objects.equals(JobContextEntity.from(job.context()), entity));
+  }
 
   boolean cancel(String id);
 
