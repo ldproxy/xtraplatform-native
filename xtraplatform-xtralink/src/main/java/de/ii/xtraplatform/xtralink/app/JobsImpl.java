@@ -103,6 +103,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   @Override
   public CompletionStage<Void> onStart(boolean isStartupAsync) {
+    System.setProperty("genffi.threads.xtralink", "jobs");
     new XtralinkLoaderImpl().load();
 
     Set<JobProcessorBase> procs = processors.get();
