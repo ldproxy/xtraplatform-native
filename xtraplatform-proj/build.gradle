@@ -8,6 +8,7 @@ description = 'PROJ integration and Java API.'
 docIgnore = true
 
 ext {
+    // renovate: datasource=github-releases depName=OSGeo/PROJ
     projVersion = '9.3.1'
     buildVersion = '0'
     nativeName = "proj-${projVersion}-${buildVersion}"
