@@ -3,18 +3,6 @@
   "extends": [
     "ldproxy/renovate-config:xtraplatform"
   ],
-  "enabledManagers": ["gradle", "gradle-wrapper", "dockerfile", "woodpecker", "custom.regex"],
-  "includePaths": [
-    "gradle/libs.versions.toml",
-    "gradle/plugins.versions.toml",
-    "**/gradle/wrapper/gradle-wrapper.properties",
-    "**/settings.gradle",
-    "**/Dockerfile",
-    ".woodpecker/**/*.yml",
-    "xtraplatform-proj/*.gradle",
-    "xtraplatform-spatialite/*.gradle",
-    "xtraplatform-xtralink/*.gradle"
-  ],
   "customManagers": [
     {
       "customType": "regex",
