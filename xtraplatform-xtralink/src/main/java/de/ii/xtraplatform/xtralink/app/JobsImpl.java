@@ -165,6 +165,11 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
     jobRegistration.put(pushedJob.id(), registration);
 
+    if (LOGGER.isInfoEnabled() || LOGGER.isInfoEnabled(MARKER.JOBS)) {
+      setupExecutionContext(pushedJob);
+      LOGGER.info(MARKER.JOBS, "{} scheduled{}", pushedJob.label(), pushedJob.description());
+    }
+
     return pushedJob;
   }
 
@@ -357,25 +362,20 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   private void logJobStatus(Job j) {
     if (LOGGER.isInfoEnabled() || LOGGER.isInfoEnabled(MARKER.JOBS)) {
+      if (jobStatus.get(j.id()) == j.status()) {
+        return;
+      }
+
       setupExecutionContext(j);
 
-      if (j.status() == Status.RUNNING
-          && jobStatus.containsKey(j.id())
-          && jobStatus.get(j.id()) == Status.ACCEPTED) {
-        LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
-
-      } else if (j.status() == Status.SUCCESSFUL
-          && jobStatus.containsKey(j.id())
-          && jobStatus.get(j.id()) != Status.SUCCESSFUL) {
-        LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
-      } else if (j.status() == Status.FAILED
-          && jobStatus.containsKey(j.id())
-          && jobStatus.get(j.id()) != Status.FAILED) {
-        LOGGER.info(MARKER.JOBS, "{} failed{}", j.label(), j.description());
-      } else if (j.status() == Status.DISMISSED
-          && jobStatus.containsKey(j.id())
-          && jobStatus.get(j.id()) != Status.DISMISSED) {
-        LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
+      switch (j.status()) {
+        case RUNNING -> LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
+        case SUCCESSFUL ->
+            LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
+        case FAILED -> LOGGER.info(MARKER.JOBS, "{} failed{}", j.label(), j.description());
+        case DISMISSED ->
+            LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
+        default -> {}
       }
     }
   }
