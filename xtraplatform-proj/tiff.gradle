@@ -1,7 +1,7 @@
 
 ext {
     // renovate: datasource=gitlab-tags depName=libtiff/libtiff
-    tiffVersion = '4.6.0'
+    tiffVersion = '4.7.2'
 }
 
 ext {
