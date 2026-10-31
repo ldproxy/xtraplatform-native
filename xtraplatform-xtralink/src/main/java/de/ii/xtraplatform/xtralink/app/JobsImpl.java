@@ -398,7 +398,13 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         case RUNNING -> LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
         case SUCCESSFUL ->
             LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
-        case FAILED -> LOGGER.info(MARKER.JOBS, "{} failed{}", j.label(), j.description());
+        case FAILED ->
+            LOGGER.warn(
+                MARKER.JOBS,
+                "{} failed{}: {}",
+                j.label(),
+                j.description(),
+                String.join(" ", j.errors()));
         case DISMISSED ->
             LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
         default -> {}

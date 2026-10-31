@@ -10,6 +10,7 @@ package de.ii.xtraplatform.xtralink.domain;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobResult;
 import de.ii.xtralink.jobs.PartialJob;
+import de.ii.xtraplatform.base.domain.LogContext;
 import de.ii.xtraplatform.blobs.domain.ResourceStore;
 import de.ii.xtraplatform.xtralink.domain.JobContext.JobContextEntity;
 import java.io.IOException;
@@ -19,11 +20,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class JobProcessorSimple<T extends JobInputs>
     implements JobProcessor<T, JobContextEntity> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(JobProcessorSimple.class);
 
   public enum Phase {
     SETUP,
@@ -190,8 +196,24 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         case FINALIZE -> finalize(partialJob, job, inputs, jobs);
       };
     } catch (Throwable e) {
+      // a processor may stop a dismissed job with an exception
+      if (jobs.isCancelled(job.id())) {
+        return jobs.failure("The job was cancelled");
+      }
+
+      // the job errors are public, the details of an unexpected error are only logged
+      long errorId = ThreadLocalRandom.current().nextLong();
+      LogContext.error(
+          LOGGER,
+          e,
+          "Error processing job {} in phase {}, error ID {}",
+          job.id(),
+          phase,
+          String.format("%016x", errorId));
       return jobs.failure(
-          "Error processing job " + job.id() + " in phase " + phase + ": " + e.getMessage());
+          String.format(
+              "Error processing job %s in phase %s, it has been logged. Error ID: %016x",
+              job.id(), phase, errorId));
       // TODO: passing errors through ffi to go does not work as expected
       // throw new JobProcessingException("Error processing job " + job.id() + " in phase " + phase,
       // e);
