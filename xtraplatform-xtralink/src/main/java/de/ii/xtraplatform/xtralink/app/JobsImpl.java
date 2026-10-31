@@ -78,6 +78,9 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private final ObjectMapper objectMapper;
   private final Map<String, Status> jobStatus;
   private final Map<String, JobListener.Registration> jobRegistration;
+  // the listeners of the jobs pushed here, and the last state passed on to each, see notifyListener
+  private final Map<String, JobListener> jobListeners;
+  private final Map<String, Integer> notifiedState;
   private final Map<String, ActiveJob> activeJobs;
   private final ScheduledExecutorService polling;
   private CancelListener.Registration cancelRegistration;
@@ -91,6 +94,8 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         jackson.getDefaultObjectMapper().registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
     this.jobStatus = new ConcurrentHashMap<>();
     this.jobRegistration = new ConcurrentHashMap<>();
+    this.jobListeners = new ConcurrentHashMap<>();
+    this.notifiedState = new ConcurrentHashMap<>();
     this.activeJobs = new ConcurrentHashMap<>();
     this.polling =
         MoreExecutors.getExitingScheduledExecutorService(
@@ -156,18 +161,14 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     JobListener onProgress2 =
         (j) -> {
           onJobUpdate(j);
-
-          if (!isActive(j)) {
-            closeRegistration(j);
-          }
-
-          onChange.onProgress(j);
+          notifyListener(j, onChange);
         };
     JobListener.Registration registration = JobListener.register(onProgress2);
 
     Job pushedJob = JobQueue.push(job, registration);
 
     jobRegistration.put(pushedJob.id(), registration);
+    jobListeners.put(pushedJob.id(), onChange);
     onJobUpdate(pushedJob);
 
     return pushedJob;
@@ -345,6 +346,41 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     }
   }
 
+  // The listener of a job learns its changes from the queue, which calls it only for the LOCAL
+  // queue, and from polling, the only source for the REDIS queue. Each state is passed on once and
+  // only if it moves the job forward, whichever source comes first; when the job is finished, its
+  // listener is released.
+  private synchronized void notifyListener(Job job, JobListener listener) {
+    int state = state(job);
+    Integer previous = notifiedState.get(job.id());
+    if (previous != null && state <= previous) {
+      return;
+    }
+    notifiedState.put(job.id(), state);
+
+    if (!isActive(job)) {
+      jobListeners.remove(job.id());
+      closeRegistration(job);
+    }
+
+    listener.onProgress(job);
+  }
+
+  // accepted < running, by progress < finished
+  private static int state(Job job) {
+    return switch (job.status()) {
+      case ACCEPTED -> 0;
+      case RUNNING -> 1 + Math.max(0, Math.min(100, percent(job)));
+      default -> 102;
+    };
+  }
+
+  private static int percent(Job job) {
+    return Objects.nonNull(job.progress()) && Objects.nonNull(job.progress().percent())
+        ? job.progress().percent()
+        : 0;
+  }
+
   private void closeRegistration(Job job) {
     JobListener.Registration removed = jobRegistration.remove(job.id());
     if (removed != null) {
@@ -360,7 +396,8 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   // Updates come from listener callbacks and from polling, possibly out of order, so a status only
   // counts if it moves the job forward. Follow-ups pushed by xtralink itself and all jobs on the
-  // REDIS queue have no listener, polling is the only source for them.
+  // REDIS queue have no listener, polling is the only source for them (also for the listeners of
+  // the jobs pushed here, see notifyListener).
   private synchronized void onJobUpdate(Job job) {
     Status previous = jobStatus.get(job.id());
     if (previous != null && stage(job.status()) <= stage(previous)) {
@@ -389,8 +426,13 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         if (isActive(job) || jobStatus.containsKey(job.id())) {
           onJobUpdate(job);
         }
+        JobListener listener = jobListeners.get(job.id());
+        if (listener != null) {
+          notifyListener(job, listener);
+        }
       }
       jobStatus.entrySet().removeIf(e -> !isActive(e.getValue()) && !listed.contains(e.getKey()));
+      notifiedState.keySet().removeIf(id -> !listed.contains(id) && !jobListeners.containsKey(id));
 
       logActiveJobSetProgress(jobs);
     } catch (Throwable e) {
