@@ -9,7 +9,7 @@ docIgnore = true
 
 ext {
     // renovate: datasource=github-releases depName=OSGeo/PROJ
-    projVersion = '9.3.1'
+    projVersion = '9.9.0'
     buildVersion = '0'
     nativeName = "proj-${projVersion}-${buildVersion}"
     nativeNamePackage = 'de.ii.xtraplatform.proj.domain'
