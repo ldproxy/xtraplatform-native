@@ -42,4 +42,13 @@ public interface JobProcessorBase {
    * @throws Exception if an error occurs during processing
    */
   JobResult process(PartialJob partialJob, Job job, JobProcessing jobs) throws Exception;
+
+  /**
+   * Called once before the job queue starts, before any job is processed. With a queue that does
+   * not survive a restart, no job of an earlier run exists any more, so files that the processor
+   * kept for such jobs can be deleted.
+   *
+   * @param persistentQueue whether jobs of an earlier run may still exist, e.g. in a REDIS queue
+   */
+  default void beforeQueueStart(boolean persistentQueue) {}
 }

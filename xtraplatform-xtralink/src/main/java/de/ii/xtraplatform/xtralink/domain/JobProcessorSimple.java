@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -165,7 +166,76 @@ public abstract class JobProcessorSimple<T extends JobInputs>
             "Error deleting output file " + path + " for job " + job.id() + ": " + e.getMessage());
       }
     }
+    deleteDirectories(markers);
     return jobs.success();
+  }
+
+  /**
+   * Deletes the output files of all jobs, if the queue does not survive a restart: no job of an
+   * earlier run exists any more, so the finalize phase would never run for them.
+   */
+  @Override
+  public void beforeQueueStart(boolean persistentQueue) {
+    if (persistentQueue) {
+      return;
+    }
+
+    List<Path> markers;
+    try (Stream<Path> entries =
+        jobStore.walk(
+            OUTPUT_MARKERS,
+            Integer.MAX_VALUE,
+            (path, attributes) -> attributes.isValue() && !attributes.isHidden())) {
+      // a marker is <job id>/<output path>
+      markers = entries.filter(path -> path.getNameCount() > 1).toList();
+    } catch (IOException e) {
+      LOGGER.warn("Could not list the output files of jobs of kind {}: {}", kind, e.getMessage());
+      return;
+    }
+
+    int deleted = 0;
+    for (Path marker : markers) {
+      Path path = marker.subpath(1, marker.getNameCount());
+      try {
+        jobStore.delete(path);
+        jobStore.delete(OUTPUT_MARKERS.resolve(marker));
+        deleted++;
+      } catch (IOException e) {
+        LOGGER.warn("Could not delete the output file {} of a job: {}", path, e.getMessage());
+      }
+    }
+    deleteDirectories(OUTPUT_MARKERS);
+
+    if (deleted > 0) {
+      LOGGER.info("Deleted {} output files of jobs of kind {} of an earlier run", deleted, kind);
+    }
+  }
+
+  // Deletes a marker folder and its sub folders, deepest first; a folder that is not empty stays.
+  private void deleteDirectories(Path root) {
+    List<Path> directories;
+    try (Stream<Path> entries =
+        jobStore.walk(root, Integer.MAX_VALUE, (path, attributes) -> !attributes.isValue())) {
+      directories =
+          entries
+              .filter(path -> !path.toString().isEmpty())
+              .sorted(Comparator.comparingInt(Path::getNameCount).reversed())
+              .toList();
+    } catch (IOException e) {
+      return;
+    }
+    for (Path directory : directories) {
+      deleteQuietly(root.resolve(directory));
+    }
+    deleteQuietly(root);
+  }
+
+  private void deleteQuietly(Path path) {
+    try {
+      jobStore.delete(path);
+    } catch (IOException e) {
+      // not empty or already gone
+    }
   }
 
   private static Path outputMarkers(Job job) {
