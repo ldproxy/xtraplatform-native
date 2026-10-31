@@ -104,9 +104,20 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     System.setProperty("genffi.threads.xtralink", "jobs");
     new XtralinkLoaderImpl().load();
 
+    boolean persistentQueue = appContext.getConfiguration().getJobs().getQueue() == QUEUE.REDIS;
+
     Set<JobProcessorBase> procs = processors.get();
     if (Objects.nonNull(procs)) {
       procs.forEach(this::register);
+      procs.forEach(
+          processor -> {
+            try {
+              processor.beforeQueueStart(persistentQueue);
+            } catch (Throwable e) {
+              LogContext.error(
+                  LOGGER, e, "Error preparing job processor {}", processor.getClass().getName());
+            }
+          });
     }
 
     this.cancelRegistration = CancelListener.register(this::onCancel);
@@ -116,9 +127,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         new QueueConfiguration(
             appContext.getConfiguration().getJobConcurrency(),
             appContext.getInstanceName(),
-            appContext.getConfiguration().getJobs().getQueue() == QUEUE.REDIS
-                ? Queue.REDIS
-                : Queue.LOCAL,
+            persistentQueue ? Queue.REDIS : Queue.LOCAL,
             appContext.getConfiguration().getRedis().getCluster(),
             appContext.getConfiguration().getRedis().getNodes());
 
