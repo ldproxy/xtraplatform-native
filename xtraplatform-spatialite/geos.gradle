@@ -1,7 +1,7 @@
 
 ext {
     // renovate: datasource=github-releases depName=libgeos/geos
-    geosVersion = '3.12.1'
+    geosVersion = '3.15.0'
 }
 
 ext {
