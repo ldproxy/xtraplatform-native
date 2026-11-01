@@ -477,7 +477,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
             MARKER.JOBS,
             "{}{} has been waiting{}, no processor of this instance takes the job kind '{}'",
             job.label(),
-            job.description(),
+            describe(job),
             since(job.createdAt()),
             job.kind());
       }
@@ -489,6 +489,12 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private boolean canProcess(Job job) {
     String prefix = job.kind() + ":";
     return processedKinds.stream().anyMatch(kind -> kind.startsWith(prefix));
+  }
+
+  // the description of a job with its id, so that the messages of jobs running at the same time,
+  // e.g. of several searches of one API, can be told apart
+  private static String describe(Job job) {
+    return job.description() + ", job " + job.id();
   }
 
   private static String since(Long epochMillis) {
@@ -505,16 +511,15 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         case ACCEPTED -> logJobAccepted(j, queuedBefore);
         case RUNNING -> logJobRunning(j, queuedBefore);
         case SUCCESSFUL ->
-            LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
+            LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), describe(j));
         case FAILED ->
             LOGGER.warn(
                 MARKER.JOBS,
                 "{} failed{}: {}",
                 j.label(),
-                j.description(),
+                describe(j),
                 String.join(" ", j.errors()));
-        case DISMISSED ->
-            LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
+        case DISMISSED -> LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), describe(j));
         default -> {}
       }
     }
@@ -523,18 +528,18 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   @SuppressWarnings({"PMD.GuardLogStatement"})
   private void logJobAccepted(Job j, boolean queuedBefore) {
     if (queuedBefore) {
-      LOGGER.info(MARKER.JOBS, "{} waiting{}{}", j.label(), since(j.createdAt()), j.description());
+      LOGGER.info(MARKER.JOBS, "{} waiting{}{}", j.label(), since(j.createdAt()), describe(j));
     } else {
-      LOGGER.info(MARKER.JOBS, "{} scheduled{}", j.label(), j.description());
+      LOGGER.info(MARKER.JOBS, "{} scheduled{}", j.label(), describe(j));
     }
   }
 
   @SuppressWarnings({"PMD.GuardLogStatement"})
   private void logJobRunning(Job j, boolean queuedBefore) {
     if (queuedBefore) {
-      LOGGER.info(MARKER.JOBS, "{} running{}{}", j.label(), since(j.startedAt()), j.description());
+      LOGGER.info(MARKER.JOBS, "{} running{}{}", j.label(), since(j.startedAt()), describe(j));
     } else {
-      LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
+      LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), describe(j));
     }
   }
 
@@ -551,7 +556,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
                     "{} at {}%{}",
                     job.label(),
                     job.progress().percent(),
-                    job.description());
+                    describe(job));
               });
     }
     /*if (logJobsTrace()) {
