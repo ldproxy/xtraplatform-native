@@ -67,6 +67,7 @@ public interface Jobs {
       Object inputs,
       Object context,
       Map<String, Object> progressDetails,
+      List<String> partials,
       Optional<Integer> ttlSeconds) {
 
     try {
@@ -85,6 +86,8 @@ public interface Jobs {
           new JobProgress(0, 0, 0, progressDetails),
           true,
           true,
+          partials,
+          false,
           List.of(),
           ttlSeconds);
     } catch (IOException e) {
@@ -103,6 +106,8 @@ public interface Jobs {
         job.progress(),
         job.setup(),
         job.cleanup(),
+        job.partials(),
+        job.sequential(),
         List.of(followUps),
         job.ttlSeconds());
   }

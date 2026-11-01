@@ -10,7 +10,6 @@ package de.ii.xtraplatform.xtralink.domain;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobResult;
 import de.ii.xtralink.jobs.PartialJob;
-import de.ii.xtralink.jobs.PartialJobConfiguration;
 import de.ii.xtraplatform.blobs.domain.ResourceStore;
 import de.ii.xtraplatform.xtralink.domain.JobContext.JobContextEntity;
 import java.io.IOException;
@@ -95,7 +94,8 @@ public abstract class JobProcessorSimple<T extends JobInputs>
 
   /**
    * Called for the setup phase of the job processing. This method is responsible for preparing the
-   * job for execution, including any necessary initialization or configuration steps.
+   * job for execution, including any necessary initialization or configuration steps. The partials
+   * of the job, usually just the execute phase, are queued by xtralink once setup succeeded.
    *
    * @param partialJob
    * @param job
@@ -184,7 +184,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
 
     try {
       return switch (phase) {
-        case SETUP -> presetup(partialJob, job, inputs, jobs);
+        case SETUP -> setup(partialJob, job, inputs, jobs);
         case EXECUTE -> execute(partialJob, job, inputs, jobs);
         case CLEANUP -> cleanup(partialJob, job, inputs, jobs);
         case FINALIZE -> finalize(partialJob, job, inputs, jobs);
@@ -196,19 +196,6 @@ public abstract class JobProcessorSimple<T extends JobInputs>
       // throw new JobProcessingException("Error processing job " + job.id() + " in phase " + phase,
       // e);
     }
-  }
-
-  private JobResult presetup(PartialJob partialJob, Job job, T inputs, JobProcessing jobs) {
-    jobs.init(job.id(), 1, null);
-
-    JobResult setupResult = setup(partialJob, job, inputs, jobs);
-
-    PartialJobConfiguration partial =
-        Jobs.createPartial(
-            partialKind(Phase.EXECUTE), job.priority(), job.id(), job.context(), 1, List.of());
-    jobs.push(partial);
-
-    return setupResult;
   }
 
   @Override
