@@ -475,20 +475,48 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         setupExecutionContext(job);
         LOGGER.warn(
             MARKER.JOBS,
-            "{}{} has been waiting{}, no processor of this instance takes the job kind '{}'",
+            "{}{} has been waiting{}, no processor of this instance takes {}",
             job.label(),
             describe(job),
             since(job.createdAt()),
-            job.kind());
+            waitingFor(job));
       }
     }
   }
 
-  // By convention, the kinds of the partial jobs of a job start with the kind of the job, e.g.
-  // "oap:echo:setup" for the job kind "oap:echo"; jobs of workflows may have others.
+  // A waiting job waits for the partial jobs that can run first: its setup, otherwise its partials,
+  // of a sequential job only the first one. A job that declares neither, e.g. one whose processor
+  // pushes the partial jobs itself, falls back to the convention that the kinds of its partial jobs
+  // start with the kind of the job, e.g. "oap:echo:setup" for the job kind "oap:echo".
   private boolean canProcess(Job job) {
-    String prefix = job.kind() + ":";
-    return processedKinds.stream().anyMatch(kind -> kind.startsWith(prefix));
+    List<String> waitingKinds = waitingKinds(job);
+    if (waitingKinds.isEmpty()) {
+      String prefix = job.kind() + ":";
+      return processedKinds.stream().anyMatch(kind -> kind.startsWith(prefix));
+    }
+    return waitingKinds.stream().anyMatch(processedKinds::contains);
+  }
+
+  private static List<String> waitingKinds(Job job) {
+    if (job.setup().isPresent() && !Objects.equals(job.setup().get().status(), Status.SUCCESSFUL)) {
+      return List.of(job.setup().get().kind());
+    }
+    List<String> partials = Objects.requireNonNullElse(job.partials(), List.of());
+    if (job.sequence().isPresent() && !partials.isEmpty()) {
+      return List.of(partials.get(0));
+    }
+    return partials;
+  }
+
+  private static String waitingFor(Job job) {
+    List<String> waitingKinds = waitingKinds(job);
+    if (waitingKinds.isEmpty()) {
+      return String.format("the job kind '%s'", job.kind());
+    }
+    return String.format(
+        "the partial job kind%s %s",
+        waitingKinds.size() == 1 ? "" : "s",
+        String.join(", ", waitingKinds.stream().map(kind -> "'" + kind + "'").toList()));
   }
 
   // the description of a job with its id, so that the messages of jobs running at the same time,
