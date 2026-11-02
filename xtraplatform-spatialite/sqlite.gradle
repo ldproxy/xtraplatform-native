@@ -1,13 +1,16 @@
 
 ext {
     // renovate: datasource=custom.sqlite depName=sqlite
-    sqliteDownload = '2024/sqlite-autoconf-3450200'
+    sqliteDownload = '2026/sqlite-autoconf-3540100'
 }
 
 ext {
     sqliteVersionLong = sqliteDownload.substring(sqliteDownload.lastIndexOf('-') + 1)
     sqliteBuildDir = new File(buildDir, 'sqlite')
-    sqliteLibDir = new File(sqliteBuildDir, '.libs')
+    // only the headers, the build dir contains a file VERSION that shadows <version> on case-insensitive file systems
+    sqliteIncludeDir = new File(buildDir, 'sqlite-include')
+    // since 3.48 sqlite is built with autosetup instead of libtool, the library is no longer in .libs
+    sqliteLibDir = sqliteBuildDir
     sqliteLibName = project.osdetector.os == 'osx' ? 'libsqlite3.dylib' : 'libsqlite3.so'
     sqliteBinName = 'sqlite3'
 }
@@ -39,13 +42,21 @@ task getSQLite(dependsOn: downloadSQLite, type: Copy) {
 task configureSQLite(dependsOn: getSQLite, type: Exec) {
     outputs.dir sqliteBuildDir
     workingDir sqliteBuildDir
-    commandLine './configure', '--disable-static'
+    // keep the soname of the libtool builds on linux, libproj and libspatialite reference it
+    commandLine(['./configure', '--disable-static'] + (project.osdetector.os == 'linux' ? ['--soname=legacy'] : []))
 }
 
 task buildSQLite(dependsOn: configureSQLite, type: Exec) {
     outputs.dir sqliteBuildDir
     workingDir sqliteBuildDir
     commandLine 'make'
+}
+
+task copySQLiteHeaders(dependsOn: buildSQLite, type: Copy) {
+    from(sqliteBuildDir) {
+        include 'sqlite3.h', 'sqlite3ext.h'
+    }
+    into sqliteIncludeDir
 }
 
 task copySQLiteLib(dependsOn: buildSQLite, type: Copy) {
