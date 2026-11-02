@@ -7,6 +7,8 @@ set -euo pipefail
 
 JAVA_VERSION=25
 GO_VERSION=1.26.5
+# the cmake package of SLES 15 SP5 is too old for PROJ >= 9.9, keep in sync with the macos build
+CMAKE_VERSION=3.28.3
 
 case "$(uname -m)" in
   x86_64) JAVA_ARCH=x64; GO_ARCH=amd64 ;;
@@ -15,9 +17,12 @@ case "$(uname -m)" in
 esac
 
 zypper ar -f https://packages.adoptium.net/artifactory/rpm/opensuse/$(. /etc/os-release; echo $VERSION_ID)/$(uname -m) adoptium
-zypper -n --gpg-auto-import-keys install --no-recommends gcc-c++ make cmake curl tar gzip git which findutils gawk sed grep diffutils patch file m4 temurin-$JAVA_VERSION-jdk
+zypper -n --gpg-auto-import-keys install --no-recommends gcc-c++ make curl tar gzip git which findutils gawk sed grep diffutils patch file m4 temurin-$JAVA_VERSION-jdk
 
 curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" | tar -xz -C /opt
+
+curl -fsSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-$(uname -m).tar.gz" | tar -xz -C /opt
+ln -s /opt/cmake-${CMAKE_VERSION}-linux-$(uname -m)/bin/* /usr/local/bin/
 
 (ldd --version | head -n 1) || true
 (gcc --version | head -n 1) || true
