@@ -1,10 +1,10 @@
 
 ext {
-    projJniVersion = '1.0-SNAPSHOT'
-    // branch proj8-updates as of 2026-10-26
-    projJniCommit = '1fedc9f37901c7ce5dbd460e6a252ba4abc498c8'
+    projJniVersion = '2.1-SNAPSHOT'
+    // branch ii-main as of 2026-11-03
+    projJniCommit = '1ab30cb1c35a8a6f46d43962342e4527309d7320'
     projJniGithubOrg = 'interactive-instruments'
-    geoApiVersion = '3.0.1'
+    geoApiVersion = '3.0.2'
     mavenVersion = '3.8.4'
 }
 
@@ -40,7 +40,7 @@ task downloadProjJni(type: Download) {
     overwrite false
 }
 
-task getProjJni(dependsOn: downloadProjJni, type: Copy) {
+task getProjJni(dependsOn: downloadProjJni, type: Sync) {
     from(zipTree(downloadProjJni.dest)) {
         eachFile { fcd ->
             fcd.relativePath = new RelativePath(true, fcd.relativePath.segments.drop(1))

@@ -33,10 +33,6 @@ dependencies {
     
     embeddedExport files(tasks.findByName('installProjJni'))
     embeddedExport group: 'org.opengis', name: 'geoapi', version: geoApiVersion
-
-    embedded (group: 'tec.units', name: 'unit-ri', version: '1.0.3') {
-        exclude module: 'unit-api'
-    }
 }
 
 configurations.embeddedExport {
@@ -49,8 +45,8 @@ jar {
 
 moduleInfo {
     exports = [
-        'org.kortforsyningen.proj',
-        'org.kortforsyningen.proj.spi'
+        'org.osgeo.proj',
+        'org.osgeo.proj.spi'
     ]
     requires = [
         'java.logging',
