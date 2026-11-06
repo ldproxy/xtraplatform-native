@@ -154,7 +154,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         jobStore.walk(markers, Integer.MAX_VALUE, (path, attributes) -> attributes.isValue())) {
       outputFiles = entries.filter(path -> !path.toString().isEmpty()).toList();
     } catch (IOException e) {
-      return jobs.failure("Error listing output files for job " + job.id() + ": " + e.getMessage());
+      return unexpectedError(job, Phase.FINALIZE, e, jobs);
     }
 
     for (Path path : outputFiles) {
@@ -162,8 +162,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         jobStore.delete(path);
         jobStore.delete(markers.resolve(path));
       } catch (IOException e) {
-        return jobs.failure(
-            "Error deleting output file " + path + " for job " + job.id() + ": " + e.getMessage());
+        return unexpectedError(job, Phase.FINALIZE, e, jobs);
       }
     }
     deleteDirectories(markers);
@@ -271,23 +270,30 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         return jobs.failure("The job was cancelled");
       }
 
-      // the job errors are public, the details of an unexpected error are only logged
-      long errorId = ThreadLocalRandom.current().nextLong();
-      LogContext.error(
-          LOGGER,
-          e,
-          "Error processing job {} in phase {}, error ID {}",
-          job.id(),
-          phase,
-          String.format("%016x", errorId));
-      return jobs.failure(
-          String.format(
-              "Error processing job %s in phase %s, it has been logged. Error ID: %016x",
-              job.id(), phase, errorId));
+      return unexpectedError(job, phase, e, jobs);
       // TODO: passing errors through ffi to go does not work as expected
       // throw new JobProcessingException("Error processing job " + job.id() + " in phase " + phase,
       // e);
     }
+  }
+
+  /**
+   * The job errors are public, so the details of an unexpected error, e.g. paths of the job store,
+   * are only logged; the job reports the error ID under which they can be found in the log.
+   */
+  private static JobResult unexpectedError(Job job, Phase phase, Throwable e, JobProcessing jobs) {
+    long errorId = ThreadLocalRandom.current().nextLong();
+    LogContext.error(
+        LOGGER,
+        e,
+        "Error processing job {} in phase {}, error ID {}",
+        job.id(),
+        phase,
+        String.format("%016x", errorId));
+    return jobs.failure(
+        String.format(
+            "Error processing job %s in phase %s, it has been logged. Error ID: %016x",
+            job.id(), phase, errorId));
   }
 
   @Override
