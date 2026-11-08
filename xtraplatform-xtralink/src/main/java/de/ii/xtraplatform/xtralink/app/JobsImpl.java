@@ -71,6 +71,8 @@ import org.threeten.extra.AmountFormats;
 public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobsImpl.class);
+  // see logWaitingWithoutProcessor
+  private static final Duration WAITING_REPORT_DELAY = Duration.ofSeconds(60);
 
   private final AppContext appContext;
   private final Lazy<Set<JobProcessorBase>> processors;
@@ -78,9 +80,19 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   private final ObjectMapper objectMapper;
   private final Map<String, Status> jobStatus;
   private final Map<String, JobListener.Registration> jobRegistration;
+  // the listeners of the jobs pushed here, and the last state passed on to each, see notifyListener
+  private final Map<String, JobListener> jobListeners;
+  private final Map<String, Integer> notifiedState;
   private final Map<String, ActiveJob> activeJobs;
+  // the kinds of the partial jobs the processors of this instance take, see canProcess
+  private final Set<String> processedKinds;
   private final ScheduledExecutorService polling;
   private CancelListener.Registration cancelRegistration;
+  // only read and written by the single polling thread
+  private boolean polled;
+  // the jobs reported as waiting without a processor of this instance, only used by the polling
+  // thread, see logWaitingWithoutProcessor
+  private final Set<String> reportedWaiting = new HashSet<>();
 
   @Inject
   JobsImpl(AppContext appContext, Jackson jackson, Lazy<Set<JobProcessorBase>> processors) {
@@ -91,7 +103,10 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         jackson.getDefaultObjectMapper().registerModule(DESERIALIZE_IMMUTABLE_BUILDER_NESTED);
     this.jobStatus = new ConcurrentHashMap<>();
     this.jobRegistration = new ConcurrentHashMap<>();
+    this.jobListeners = new ConcurrentHashMap<>();
+    this.notifiedState = new ConcurrentHashMap<>();
     this.activeJobs = new ConcurrentHashMap<>();
+    this.processedKinds = ConcurrentHashMap.newKeySet();
     this.polling =
         MoreExecutors.getExitingScheduledExecutorService(
             (ScheduledThreadPoolExecutor)
@@ -104,9 +119,20 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     System.setProperty("genffi.threads.xtralink", "jobs");
     new XtralinkLoaderImpl().load();
 
+    boolean persistentQueue = appContext.getConfiguration().getJobs().getQueue() == QUEUE.REDIS;
+
     Set<JobProcessorBase> procs = processors.get();
     if (Objects.nonNull(procs)) {
       procs.forEach(this::register);
+      procs.forEach(
+          processor -> {
+            try {
+              processor.beforeQueueStart(persistentQueue);
+            } catch (Throwable e) {
+              LogContext.error(
+                  LOGGER, e, "Error preparing job processor {}", processor.getClass().getName());
+            }
+          });
     }
 
     this.cancelRegistration = CancelListener.register(this::onCancel);
@@ -116,9 +142,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         new QueueConfiguration(
             appContext.getConfiguration().getJobConcurrency(),
             appContext.getInstanceName(),
-            appContext.getConfiguration().getJobs().getQueue() == QUEUE.REDIS
-                ? Queue.REDIS
-                : Queue.LOCAL,
+            persistentQueue ? Queue.REDIS : Queue.LOCAL,
             appContext.getConfiguration().getRedis().getCluster(),
             appContext.getConfiguration().getRedis().getNodes());
 
@@ -147,18 +171,14 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     JobListener onProgress2 =
         (j) -> {
           onJobUpdate(j);
-
-          if (!isActive(j)) {
-            closeRegistration(j);
-          }
-
-          onChange.onProgress(j);
+          notifyListener(j, onChange);
         };
     JobListener.Registration registration = JobListener.register(onProgress2);
 
     Job pushedJob = JobQueue.push(job, registration);
 
     jobRegistration.put(pushedJob.id(), registration);
+    jobListeners.put(pushedJob.id(), onChange);
     onJobUpdate(pushedJob);
 
     return pushedJob;
@@ -328,12 +348,48 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     for (String kind : processor.getKinds()) {
       try {
         JobQueue.register(kind, processor.getPriority(), registration);
+        processedKinds.add(kind);
         // LOGGER.info("JOBS: Registered job processor for kind: {}", kind);
       } catch (Throwable e) {
         LOGGER.error("JOBS: Failed to register job processor for kind: {}", kind, e);
         registration.close();
       }
     }
+  }
+
+  // The listener of a job learns its changes from the queue, which calls it only for the LOCAL
+  // queue, and from polling, the only source for the REDIS queue. Each state is passed on once and
+  // only if it moves the job forward, whichever source comes first; when the job is finished, its
+  // listener is released.
+  private synchronized void notifyListener(Job job, JobListener listener) {
+    int state = state(job);
+    Integer previous = notifiedState.get(job.id());
+    if (previous != null && state <= previous) {
+      return;
+    }
+    notifiedState.put(job.id(), state);
+
+    if (!isActive(job)) {
+      jobListeners.remove(job.id());
+      closeRegistration(job);
+    }
+
+    listener.onProgress(job);
+  }
+
+  // accepted < running, by progress < finished
+  private static int state(Job job) {
+    return switch (job.status()) {
+      case ACCEPTED -> 0;
+      case RUNNING -> 1 + Math.max(0, Math.min(100, percent(job)));
+      default -> 102;
+    };
+  }
+
+  private static int percent(Job job) {
+    return Objects.nonNull(job.progress()) && Objects.nonNull(job.progress().percent())
+        ? job.progress().percent()
+        : 0;
   }
 
   private void closeRegistration(Job job) {
@@ -351,14 +407,21 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   // Updates come from listener callbacks and from polling, possibly out of order, so a status only
   // counts if it moves the job forward. Follow-ups pushed by xtralink itself and all jobs on the
-  // REDIS queue have no listener, polling is the only source for them.
-  private synchronized void onJobUpdate(Job job) {
+  // REDIS queue have no listener, polling is the only source for them (also for the listeners of
+  // the jobs pushed here, see notifyListener).
+  private void onJobUpdate(Job job) {
+    onJobUpdate(job, false);
+  }
+
+  // Active jobs found by the first poll were queued before this start, e.g. on the REDIS queue
+  // before a restart, so they are logged as waiting or running since then.
+  private synchronized void onJobUpdate(Job job, boolean queuedBefore) {
     Status previous = jobStatus.get(job.id());
     if (previous != null && stage(job.status()) <= stage(previous)) {
       return;
     }
     jobStatus.put(job.id(), job.status());
-    logJobStatus(job);
+    logJobStatus(job, queuedBefore && previous == null);
   }
 
   private static int stage(Status status) {
@@ -373,36 +436,138 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     try {
       List<Job> jobs = list();
       Set<String> listed = new HashSet<>();
+      boolean firstPoll = !polled;
 
       for (Job job : jobs) {
         listed.add(job.id());
         // finished jobs never seen active are history, e.g. from before a restart
         if (isActive(job) || jobStatus.containsKey(job.id())) {
-          onJobUpdate(job);
+          onJobUpdate(job, firstPoll);
+        }
+        JobListener listener = jobListeners.get(job.id());
+        if (listener != null) {
+          notifyListener(job, listener);
         }
       }
       jobStatus.entrySet().removeIf(e -> !isActive(e.getValue()) && !listed.contains(e.getKey()));
+      notifiedState.keySet().removeIf(id -> !listed.contains(id) && !jobListeners.containsKey(id));
 
+      logWaitingWithoutProcessor(jobs, listed);
       logActiveJobSetProgress(jobs);
+      polled = true;
     } catch (Throwable e) {
       LogContext.error(LOGGER, e, "Error while polling jobs");
     }
   }
 
-  private void logJobStatus(Job j) {
+  // A job may well wait for another executor on the same queue, e.g. a worker of a workflow, so
+  // only a job that is still waiting after a while is reported, once.
+  private void logWaitingWithoutProcessor(List<Job> jobs, Set<String> listed) {
+    reportedWaiting.retainAll(listed);
+    long now = Instant.now().toEpochMilli();
+    for (Job job : jobs) {
+      if (job.status() == Status.ACCEPTED
+          && Objects.nonNull(job.createdAt())
+          && now - job.createdAt() >= WAITING_REPORT_DELAY.toMillis()
+          && !canProcess(job)
+          && reportedWaiting.add(job.id())
+          && (LOGGER.isWarnEnabled() || LOGGER.isWarnEnabled(MARKER.JOBS))) {
+        setupExecutionContext(job);
+        LOGGER.warn(
+            MARKER.JOBS,
+            "{}{} has been waiting{}, no processor of this instance takes {}",
+            job.label(),
+            describe(job),
+            since(job.createdAt()),
+            waitingFor(job));
+      }
+    }
+  }
+
+  // A waiting job waits for the partial jobs that can run first: its setup, otherwise its partials,
+  // of a sequential job only the first one. A job that declares neither, e.g. one whose processor
+  // pushes the partial jobs itself, falls back to the convention that the kinds of its partial jobs
+  // start with the kind of the job, e.g. "oap:echo:setup" for the job kind "oap:echo".
+  private boolean canProcess(Job job) {
+    List<String> waitingKinds = waitingKinds(job);
+    if (waitingKinds.isEmpty()) {
+      String prefix = job.kind() + ":";
+      return processedKinds.stream().anyMatch(kind -> kind.startsWith(prefix));
+    }
+    return waitingKinds.stream().anyMatch(processedKinds::contains);
+  }
+
+  private static List<String> waitingKinds(Job job) {
+    if (job.setup().isPresent() && !Objects.equals(job.setup().get().status(), Status.SUCCESSFUL)) {
+      return List.of(job.setup().get().kind());
+    }
+    List<String> partials = Objects.requireNonNullElse(job.partials(), List.of());
+    if (job.sequence().isPresent() && !partials.isEmpty()) {
+      return List.of(partials.get(0));
+    }
+    return partials;
+  }
+
+  private static String waitingFor(Job job) {
+    List<String> waitingKinds = waitingKinds(job);
+    if (waitingKinds.isEmpty()) {
+      return String.format("the job kind '%s'", job.kind());
+    }
+    return String.format(
+        "the partial job kind%s %s",
+        waitingKinds.size() == 1 ? "" : "s",
+        String.join(", ", waitingKinds.stream().map(kind -> "'" + kind + "'").toList()));
+  }
+
+  // the description of a job with its id, so that the messages of jobs running at the same time,
+  // e.g. of several searches of one API, can be told apart
+  private static String describe(Job job) {
+    return job.description() + ", job " + job.id();
+  }
+
+  private static String since(Long epochMillis) {
+    return Objects.nonNull(epochMillis) && epochMillis > 0
+        ? " since " + Instant.ofEpochMilli(epochMillis)
+        : "";
+  }
+
+  private void logJobStatus(Job j, boolean queuedBefore) {
     if (LOGGER.isInfoEnabled() || LOGGER.isInfoEnabled(MARKER.JOBS)) {
       setupExecutionContext(j);
 
       switch (j.status()) {
-        case ACCEPTED -> LOGGER.info(MARKER.JOBS, "{} scheduled{}", j.label(), j.description());
-        case RUNNING -> LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), j.description());
+        case ACCEPTED -> logJobAccepted(j, queuedBefore);
+        case RUNNING -> logJobRunning(j, queuedBefore);
         case SUCCESSFUL ->
-            LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), j.description());
-        case FAILED -> LOGGER.info(MARKER.JOBS, "{} failed{}", j.label(), j.description());
-        case DISMISSED ->
-            LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), j.description());
+            LOGGER.info(MARKER.JOBS, "{} completed successfully{}", j.label(), describe(j));
+        case FAILED ->
+            LOGGER.warn(
+                MARKER.JOBS,
+                "{} failed{}: {}",
+                j.label(),
+                describe(j),
+                String.join(" ", j.errors()));
+        case DISMISSED -> LOGGER.info(MARKER.JOBS, "{} was cancelled{}", j.label(), describe(j));
         default -> {}
       }
+    }
+  }
+
+  @SuppressWarnings({"PMD.GuardLogStatement"})
+  private void logJobAccepted(Job j, boolean queuedBefore) {
+    if (queuedBefore) {
+      LOGGER.info(MARKER.JOBS, "{} waiting{}{}", j.label(), since(j.createdAt()), describe(j));
+    } else {
+      LOGGER.info(MARKER.JOBS, "{} scheduled{}", j.label(), describe(j));
+    }
+  }
+
+  @SuppressWarnings({"PMD.GuardLogStatement"})
+  private void logJobRunning(Job j, boolean queuedBefore) {
+    if (queuedBefore) {
+      LOGGER.info(MARKER.JOBS, "{} running{}{}", j.label(), since(j.startedAt()), describe(j));
+    } else {
+      LOGGER.info(MARKER.JOBS, "{} started{}", j.label(), describe(j));
     }
   }
 
@@ -419,7 +584,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
                     "{} at {}%{}",
                     job.label(),
                     job.progress().percent(),
-                    job.description());
+                    describe(job));
               });
     }
     /*if (logJobsTrace()) {
