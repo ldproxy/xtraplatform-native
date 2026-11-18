@@ -10,20 +10,27 @@ package de.ii.xtraplatform.xtralink.domain;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.JobResult;
 import de.ii.xtralink.jobs.PartialJob;
+import de.ii.xtraplatform.base.domain.LogContext;
 import de.ii.xtraplatform.blobs.domain.ResourceStore;
 import de.ii.xtraplatform.xtralink.domain.JobContext.JobContextEntity;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class JobProcessorSimple<T extends JobInputs>
     implements JobProcessor<T, JobContextEntity> {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(JobProcessorSimple.class);
 
   public enum Phase {
     SETUP,
@@ -147,7 +154,7 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         jobStore.walk(markers, Integer.MAX_VALUE, (path, attributes) -> attributes.isValue())) {
       outputFiles = entries.filter(path -> !path.toString().isEmpty()).toList();
     } catch (IOException e) {
-      return jobs.failure("Error listing output files for job " + job.id() + ": " + e.getMessage());
+      return unexpectedError(job, Phase.FINALIZE, e, jobs);
     }
 
     for (Path path : outputFiles) {
@@ -155,11 +162,79 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         jobStore.delete(path);
         jobStore.delete(markers.resolve(path));
       } catch (IOException e) {
-        return jobs.failure(
-            "Error deleting output file " + path + " for job " + job.id() + ": " + e.getMessage());
+        return unexpectedError(job, Phase.FINALIZE, e, jobs);
       }
     }
+    deleteDirectories(markers);
     return jobs.success();
+  }
+
+  /**
+   * Deletes the output files of all jobs, if the queue does not survive a restart: no job of an
+   * earlier run exists any more, so the finalize phase would never run for them.
+   */
+  @Override
+  public void beforeQueueStart(boolean persistentQueue) {
+    if (persistentQueue) {
+      return;
+    }
+
+    List<Path> markers;
+    try (Stream<Path> entries =
+        jobStore.walk(
+            OUTPUT_MARKERS,
+            Integer.MAX_VALUE,
+            (path, attributes) -> attributes.isValue() && !attributes.isHidden())) {
+      // a marker is <job id>/<output path>
+      markers = entries.filter(path -> path.getNameCount() > 1).toList();
+    } catch (IOException e) {
+      LOGGER.warn("Could not list the output files of jobs of kind {}: {}", kind, e.getMessage());
+      return;
+    }
+
+    int deleted = 0;
+    for (Path marker : markers) {
+      Path path = marker.subpath(1, marker.getNameCount());
+      try {
+        jobStore.delete(path);
+        jobStore.delete(OUTPUT_MARKERS.resolve(marker));
+        deleted++;
+      } catch (IOException e) {
+        LOGGER.warn("Could not delete the output file {} of a job: {}", path, e.getMessage());
+      }
+    }
+    deleteDirectories(OUTPUT_MARKERS);
+
+    if (deleted > 0) {
+      LOGGER.info("Deleted {} output files of jobs of kind {} of an earlier run", deleted, kind);
+    }
+  }
+
+  // Deletes a marker folder and its sub folders, deepest first; a folder that is not empty stays.
+  private void deleteDirectories(Path root) {
+    List<Path> directories;
+    try (Stream<Path> entries =
+        jobStore.walk(root, Integer.MAX_VALUE, (path, attributes) -> !attributes.isValue())) {
+      directories =
+          entries
+              .filter(path -> !path.toString().isEmpty())
+              .sorted(Comparator.comparingInt(Path::getNameCount).reversed())
+              .toList();
+    } catch (IOException e) {
+      return;
+    }
+    for (Path directory : directories) {
+      deleteQuietly(root.resolve(directory));
+    }
+    deleteQuietly(root);
+  }
+
+  private void deleteQuietly(Path path) {
+    try {
+      jobStore.delete(path);
+    } catch (IOException e) {
+      // not empty or already gone
+    }
   }
 
   private static Path outputMarkers(Job job) {
@@ -190,12 +265,35 @@ public abstract class JobProcessorSimple<T extends JobInputs>
         case FINALIZE -> finalize(partialJob, job, inputs, jobs);
       };
     } catch (Throwable e) {
-      return jobs.failure(
-          "Error processing job " + job.id() + " in phase " + phase + ": " + e.getMessage());
+      // a processor may stop a dismissed job with an exception
+      if (jobs.isCancelled(job.id())) {
+        return jobs.failure("The job was cancelled");
+      }
+
+      return unexpectedError(job, phase, e, jobs);
       // TODO: passing errors through ffi to go does not work as expected
       // throw new JobProcessingException("Error processing job " + job.id() + " in phase " + phase,
       // e);
     }
+  }
+
+  /**
+   * The job errors are public, so the details of an unexpected error, e.g. paths of the job store,
+   * are only logged; the job reports the error ID under which they can be found in the log.
+   */
+  private static JobResult unexpectedError(Job job, Phase phase, Throwable e, JobProcessing jobs) {
+    long errorId = ThreadLocalRandom.current().nextLong();
+    LogContext.error(
+        LOGGER,
+        e,
+        "Error processing job {} in phase {}, error ID {}",
+        job.id(),
+        phase,
+        String.format("%016x", errorId));
+    return jobs.failure(
+        String.format(
+            "Error processing job %s in phase %s, it has been logged. Error ID: %016x",
+            job.id(), phase, errorId));
   }
 
   @Override
