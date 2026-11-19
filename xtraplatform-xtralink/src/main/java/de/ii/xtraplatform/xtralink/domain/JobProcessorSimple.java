@@ -192,6 +192,11 @@ public abstract class JobProcessorSimple<T extends JobInputs>
       return;
     }
 
+    // nothing to delete; a read-only store also never has markers and rejects every delete
+    if (markers.isEmpty()) {
+      return;
+    }
+
     int deleted = 0;
     for (Path marker : markers) {
       Path path = marker.subpath(1, marker.getNameCount());
