@@ -148,15 +148,19 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
     return AppLifeCycle.super.onStart(isStartupAsync);
   }
 
+  // The queue takes partial jobs until stop is called and stop blocks until the running ones have
+  // drained (bounded by the queue's shutdown timeout), so the processors and the cancel listener
+  // have to stay registered until it returns: a partial job reaching a closed processor fails
+  // permanently, and a closed cancel listener cannot stop the ones still running.
   @Override
   public void onStop() {
+    JobQueue.stop();
+
     registrations.forEach(Registration::close);
 
     if (Objects.nonNull(cancelRegistration)) {
       cancelRegistration.close();
     }
-
-    JobQueue.stop();
   }
 
   @Override
@@ -167,7 +171,7 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
         (j) -> {
           onJobUpdate(j);
 
-          if (!isActive(j)) {
+          if (isSettled(j)) {
             closeRegistration(j);
           }
 
@@ -370,9 +374,8 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
   }
 
   // Updates come from listener callbacks and from polling, possibly out of order, so a status only
-  // counts if it moves the job forward. Follow-ups pushed by xtralink itself and all jobs on the
-  // REDIS queue have no listener, polling is the only source for them (also for the listeners of
-  // the jobs pushed here, see notifyListener).
+  // counts if it moves the job forward. Follow-ups pushed by xtralink itself and jobs pushed by
+  // other instances on the REDIS queue have no listener here, polling is the only source for them.
   private void onJobUpdate(Job job) {
     onJobUpdate(job, false);
   }
@@ -554,6 +557,17 @@ public class JobsImpl implements Jobs, JobProcessing, AppLifeCycle {
 
   private static boolean isActive(Job job) {
     return isActive(job.status());
+  }
+
+  // A finished job still changes while its cleanup runs, a failing cleanup turns it FAILED, so its
+  // listener is only done once the cleanup has finished too (same rule as jobSettled in xtralink).
+  private static boolean isSettled(Job job) {
+    return isFinished(job.finishedAt())
+        && job.cleanup().map(cleanup -> isFinished(cleanup.finishedAt())).orElse(true);
+  }
+
+  private static boolean isFinished(Long finishedAt) {
+    return Objects.nonNull(finishedAt) && finishedAt > 0;
   }
 
   private static boolean isActive(Status status) {
