@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.azahnen.dagger.annotations.AutoBind;
 import de.ii.xtralink.jobs.Job;
 import de.ii.xtralink.jobs.PartialJob;
+import de.ii.xtralink.jobs.internal.JobQueue;
 import de.ii.xtraplatform.base.domain.Jackson;
 import de.ii.xtraplatform.ops.domain.OpsEndpoint;
 import de.ii.xtraplatform.xtralink.domain.Jobs;
@@ -22,7 +23,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -96,5 +99,22 @@ public class OpsEndpointJobs implements OpsEndpoint {
       LOGGER.error("Error while serializing jobs", e);
       throw e;
     }
+  }
+
+  @POST
+  @Path("/rpc")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      summary = "Job queue RPC",
+      description =
+          "JSON-RPC 2.0 access to the job queue for remote xtralink executors (queue `rpc` with"
+              + " `rpc.url` pointing here). Only answered with jobs queue `LOCAL`; with `REDIS`,"
+              + " every request gets a JSON-RPC error, since executors reach Redis directly.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "JSON-RPC response, result or error"),
+  })
+  public Response rpc(String request) {
+    return Response.ok(JobQueue.rpc(request)).build();
   }
 }
