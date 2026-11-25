@@ -6,7 +6,7 @@ allprojects {
     group = 'de.interactive_instruments'
 }
 
-version = "2.7.0-${platform}${versionSuffix}"
+version = "2.8.0-${platform}${versionSuffix}"
 
 
 //TODO
