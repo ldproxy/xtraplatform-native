@@ -1,7 +1,7 @@
 
 ext {
     // renovate: datasource=custom.sqlite depName=sqlite
-    sqliteDownload = '2024/sqlite-autoconf-3450200'
+    sqliteDownload = '2026/sqlite-autoconf-3540100'
 }
 
 ext {
